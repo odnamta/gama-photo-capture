@@ -136,24 +136,24 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 ```
 
 ## Current State (January 2026)
-- **Status**: v0.1 Foundation Complete ✅ | Pivoting to Guided Capture
+- **Status**: v0.2 Job Selection Complete ✅ | Next: Guided Capture Flow
 - **Phase**: Development
 - **Dependencies**: GAMA ERP v1.0 launch (March 12, 2026)
 - **Planned Start**: April 2026
 
 ## Active Sprint Tasks
 
-### v0.2 Job Selection + Checklist Status
-- [ ] Fetch jobs assigned to current user from job_orders
-- [ ] Job list UI showing today's jobs
-- [ ] Job card shows checklist progress (e.g., "3/5 photos")
-- [ ] Job detail page with stage cards
-- [ ] Stage cards show: status, required count, completion
-- [ ] "Start Capture" button per stage
-- [ ] Lock job_end until job_start complete
+### v0.2 Job Selection + Checklist Status ✅
+- [x] Fetch jobs assigned to current user from job_orders
+- [x] Job list UI showing today's jobs
+- [x] Job card shows checklist progress (e.g., "3/5 photos")
+- [x] Job detail page with stage cards
+- [x] Stage cards show: status, required count, completion
+- [x] "Start Capture" button per stage
+- [x] Lock job_end until job_start complete
 
 ### v0.3 Guided Capture Flow
-- [ ] Create photo_checklists table with seed data
+- [x] Create photo_checklists table with seed data (applied via Supabase MCP)
 - [ ] Load checklist items for selected stage
 - [ ] Step indicator (Step 1 of 5)
 - [ ] Instruction display with tips
@@ -163,6 +163,8 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 - [ ] Handle required vs optional items
 
 ## Recent Changes
+- 2026-01-31: v0.2 Job Selection Complete - Job list, job detail, stage cards, stage locking, 131 tests
+- 2026-01-31: Database migration applied - photo_checklists, shipment_photos, photo_upload_queue tables
 - 2026-01-31: Pivot to guided capture model (Zipcar-style) - Updated steering files and specs
 - 2026-01-31: v0.1 Foundation Complete - Full app shell, auth, PWA foundation, 116 tests passing
 See `CHANGELOG.md` for detailed version history.
