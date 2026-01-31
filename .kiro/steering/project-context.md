@@ -149,7 +149,7 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 ```
 
 ## Current State (January 2026)
-- **Status**: v0.4 Real Camera + GPS Integration Complete ✅ | Next: Photo Upload + Offline Sync (v0.5)
+- **Status**: v0.5 Photo Upload + Offline Sync Complete ✅ | Next: PWA & Polish (v0.6)
 - **Phase**: Development
 - **Dependencies**: GAMA ERP v1.0 launch (March 12, 2026)
 - **Planned Start**: April 2026
@@ -185,14 +185,17 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 - [x] Stream interruption handling
 - [x] Fallback to file picker
 
-### v0.5 Photo Upload + Offline Sync (Next)
-- [ ] Upload photos to Supabase Storage
-- [ ] Create shipment_photos records
-- [ ] Background sync when online
-- [ ] Queue management UI
-- [ ] Retry failed uploads
+### v0.5 Photo Upload + Offline Sync ✅
+- [x] Upload photos to Supabase Storage
+- [x] Create shipment_photos records
+- [x] Background sync when online
+- [x] Queue management UI
+- [x] Retry failed uploads
 
 ## Recent Changes
+- 2026-01-31: v0.5 Photo Upload + Offline Sync Complete - Full queue UI, sync manager, 1440 tests, 77 property tests
+- 2026-01-31: v0.5 Implementation Progress - Upload service, storage path, useOnlineStatus hook, 1422 tests, 64 upload-sync property tests
+- 2026-01-31: v0.5 Spec Complete - requirements.md, design.md, tasks.md with 16 correctness properties, 13 implementation tasks
 - 2026-01-31: v0.4 Real Camera Complete - getUserMedia, camera switching, GPS, 1235 tests, 131 property tests
 - 2026-01-31: v0.3 Guided Capture Complete - Full capture flow with 793 tests, 14 property tests, IndexedDB persistence
 - 2026-01-31: v0.3 Spec Complete - design.md and tasks.md with 13 correctness properties, 12 implementation tasks

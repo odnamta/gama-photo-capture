@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-01-31 - v0.5 Photo Upload + Offline Sync Complete
+
+### ✨ Features
+- Storage path generation service (`lib/sync/storage-path.ts`)
+- Upload service for Supabase Storage and database (`lib/sync/upload-service.ts`)
+- Online/offline status hook (`hooks/use-online-status.ts`)
+- Upload queue hook (`hooks/use-upload-queue.ts`) - groups photos by status
+- Sync manager hook (`hooks/use-sync-manager.ts`) - orchestrates upload process
+- Sync context provider (`contexts/sync-context.tsx`) - app-wide sync state
+- IndexedDB retry tracking fields (retryCount, lastError, lastAttemptAt)
+- Helper functions: `getUploadablePhotos`, `updatePhotoRetry`, `resetPhotoRetry`
+
+### 🧩 Components
+- `SyncStatusBadge` atom - header badge with pending count and upload animation
+- `UploadProgress` atom - progress bar for active uploads
+- `QueueItemActions` atom - retry/delete buttons for failed photos
+- `EmptyQueueState` atom - success message when queue is empty
+- `QueueItem` molecule - photo card with thumbnail, metadata, status, actions
+- `QueueSummary` molecule - stats overview with retry all button
+- `QueueList` organism - grouped list of queue items
+- Enhanced `AppHeader` with sync status badge
+- Enhanced `AppLayout` with sync context integration
+
+### 🔧 Improvements
+- Extended IndexedDB schema to version 2 with retry tracking
+- Storage path format: `{userId}/{YYYY}/{MM}/{jobOrderId}/{stage}/{timestamp}_{photoId}.jpg`
+- `useSyncExternalStore` for React 18+ online status tracking
+- SSR-safe online status with server snapshot
+- FIFO queue processing (oldest photos first)
+- Sequential upload (one at a time)
+- Exponential backoff retry (1s, 2s, 4s)
+- Maximum 3 retry attempts before manual intervention required
+- Auto-sync when coming online
+- Pause sync when going offline
+
+### 🧪 Tests
+- 1440 tests passing (up from 1235)
+- 77 property-based tests for upload-sync feature
+- Property tests: Storage path format, status transitions, metadata preservation, blob deletion safety, retry behavior, FIFO processing, sequential upload, manual retry reset, queue grouping, header badge count
+
+### 📝 Pages
+- Updated `/queue` page with full queue management UI
+- Queue summary with pending/uploading/failed counts
+- Grouped photo list with thumbnails and actions
+- Retry individual photos or retry all failed
+- Delete failed photos from queue
+
+---
+
 ## [0.4.0] - 2026-01-31 - v0.4 Real Camera + GPS Integration Complete
 
 ### ✨ Features

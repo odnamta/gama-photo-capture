@@ -1,9 +1,21 @@
 'use client'
 
-import { ArrowLeft, Upload } from 'lucide-react'
+/**
+ * App Header Component
+ * 
+ * Main header for the app with navigation, offline indicator,
+ * and sync status badge.
+ * 
+ * @see .kiro/specs/v0.5-photo-upload-sync/design.md - AppHeader enhancement
+ * 
+ * **Validates: Requirements 5.1, 5.4, 5.5**
+ */
+
+import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { OfflineIndicator } from '@/components/atoms/offline-indicator'
+import { SyncStatusBadge } from '@/components/atoms/sync-status-badge'
 import { cn } from '@/lib/utils'
 
 interface AppHeaderProps {
@@ -12,6 +24,7 @@ interface AppHeaderProps {
   showQueue?: boolean
   queueCount?: number
   isOnline?: boolean
+  isSyncing?: boolean
   className?: string
   headerAction?: React.ReactNode
 }
@@ -22,6 +35,7 @@ export function AppHeader({
   showQueue = false,
   queueCount = 0,
   isOnline = true,
+  isSyncing = false,
   className,
   headerAction,
 }: AppHeaderProps) {
@@ -48,25 +62,17 @@ export function AppHeader({
         <h1 className="text-lg font-semibold">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {headerAction}
         <OfflineIndicator isOnline={isOnline} />
         
         {showQueue && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <SyncStatusBadge
+            pendingCount={queueCount}
+            isUploading={isSyncing}
+            isOnline={isOnline}
             onClick={() => router.push('/queue')}
-            aria-label={`Upload queue: ${queueCount} pending`}
-            className="relative"
-          >
-            <Upload className="h-5 w-5" />
-            {queueCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                {queueCount > 99 ? '99+' : queueCount}
-              </span>
-            )}
-          </Button>
+          />
         )}
       </div>
     </header>

@@ -53,6 +53,17 @@ export interface OfflinePhoto {
   status: 'pending' | 'uploading' | 'failed'
   /** ISO timestamp when record was created */
   createdAt: string
+  
+  // ============================================
+  // RETRY TRACKING FIELDS (v0.5)
+  // ============================================
+  
+  /** Number of upload retry attempts (0 = never tried, increments on each failure) */
+  retryCount?: number
+  /** Last error message from failed upload attempt */
+  lastError?: string | null
+  /** ISO timestamp of last upload attempt */
+  lastAttemptAt?: string | null
 }
 
 // ============================================
@@ -79,6 +90,28 @@ export class PhotoCaptureDB extends Dexie {
       // Indexes: status, jobOrderId, checklistItemId, createdAt
       // Compound index: [jobOrderId+stage] for efficient stage queries
       photos: 'id, status, jobOrderId, checklistItemId, createdAt, [jobOrderId+stage]'
+    })
+    
+    // Version 2: Add retry tracking fields (v0.5)
+    // No schema change needed since new fields are optional and not indexed
+    // Dexie handles optional fields automatically - existing records will have undefined values
+    this.version(2).stores({
+      // Same indexes as v1 - new fields (retryCount, lastError, lastAttemptAt) are not indexed
+      photos: 'id, status, jobOrderId, checklistItemId, createdAt, [jobOrderId+stage]'
+    }).upgrade(tx => {
+      // Migration: Initialize retry fields for existing photos
+      // This ensures existing photos have consistent default values
+      return tx.table('photos').toCollection().modify(photo => {
+        if (photo.retryCount === undefined) {
+          photo.retryCount = 0
+        }
+        if (photo.lastError === undefined) {
+          photo.lastError = null
+        }
+        if (photo.lastAttemptAt === undefined) {
+          photo.lastAttemptAt = null
+        }
+      })
     })
   }
 }
@@ -244,6 +277,85 @@ export async function getPhotoCountsByStatus(): Promise<{
  */
 export async function clearAllPhotos(): Promise<void> {
   await db.photos.clear()
+}
+
+// ============================================
+// RETRY MANAGEMENT FUNCTIONS (v0.5)
+// ============================================
+
+/**
+ * Get photos ready for upload (pending or failed with retryCount < maxRetries)
+ * 
+ * Returns photos in FIFO order (oldest first based on createdAt).
+ * This function is used by the sync manager to determine which photos
+ * should be uploaded next.
+ * 
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Array of photos ready for upload, sorted by createdAt ascending
+ * 
+ * **Validates: Requirements 3.1, 3.6**
+ */
+export async function getUploadablePhotos(maxRetries: number = 3): Promise<OfflinePhoto[]> {
+  // Get all photos with status 'pending' or 'failed'
+  const photos = await db.photos
+    .where('status')
+    .anyOf(['pending', 'failed'])
+    .toArray()
+  
+  // Filter out photos that have exceeded retry limit
+  const uploadable = photos.filter(photo => {
+    const retryCount = photo.retryCount ?? 0
+    return retryCount < maxRetries
+  })
+  
+  // Sort by createdAt ascending (oldest first - FIFO)
+  return uploadable.sort((a, b) => {
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  })
+}
+
+/**
+ * Update photo with retry information after a failed upload attempt
+ * 
+ * Increments the retry count, sets the error message, and updates
+ * the last attempt timestamp. Also sets status to 'failed'.
+ * 
+ * @param id - Photo ID
+ * @param error - Error message from the failed upload attempt
+ * 
+ * **Validates: Requirements 3.1, 3.6**
+ */
+export async function updatePhotoRetry(id: string, error: string): Promise<void> {
+  const photo = await db.photos.get(id)
+  if (photo) {
+    const currentRetryCount = photo.retryCount ?? 0
+    await db.photos.update(id, {
+      status: 'failed',
+      retryCount: currentRetryCount + 1,
+      lastError: error,
+      lastAttemptAt: new Date().toISOString(),
+    })
+  }
+}
+
+/**
+ * Reset retry count for manual retry
+ * 
+ * Resets the retry count to 0, clears the error message and last attempt
+ * timestamp, and sets status back to 'pending'. This allows the photo
+ * to be retried by the sync manager.
+ * 
+ * @param id - Photo ID
+ * 
+ * **Validates: Requirements 3.1, 3.6**
+ */
+export async function resetPhotoRetry(id: string): Promise<void> {
+  await db.photos.update(id, {
+    status: 'pending',
+    retryCount: 0,
+    lastError: null,
+    lastAttemptAt: null,
+  })
 }
 
 // ============================================

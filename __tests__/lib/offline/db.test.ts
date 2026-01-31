@@ -23,6 +23,9 @@ import {
   getPhotoCountsByStatus,
   clearAllPhotos,
   savePhotoToIndexedDB,
+  getUploadablePhotos,
+  updatePhotoRetry,
+  resetPhotoRetry,
   type OfflinePhoto,
 } from '@/lib/offline/db'
 
@@ -50,6 +53,10 @@ function createTestPhoto(overrides: Partial<OfflinePhoto> = {}): OfflinePhoto {
     notes: null,
     status: 'pending',
     createdAt: new Date().toISOString(),
+    // Retry tracking fields (v0.5)
+    retryCount: 0,
+    lastError: null,
+    lastAttemptAt: null,
     ...overrides,
   }
 }
@@ -919,5 +926,576 @@ describe('savePhotoToIndexedDB', () => {
     
     expect(job123StartPhotos).toHaveLength(1)
     expect(job123StartPhotos[0].checklistItemId).toBe('checklist-1')
+  })
+})
+
+
+// ============================================
+// RETRY FIELDS TESTS (v0.5)
+// ============================================
+
+describe('Retry Fields (v0.5)', () => {
+  beforeEach(async () => {
+    await clearAllPhotos()
+  })
+
+  afterEach(async () => {
+    await clearAllPhotos()
+  })
+
+  describe('OfflinePhoto retry fields', () => {
+    it('should store retryCount field', async () => {
+      const photo = createTestPhoto({ retryCount: 2 })
+      await db.photos.add(photo)
+      
+      const retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.retryCount).toBe(2)
+    })
+
+    it('should store lastError field', async () => {
+      const photo = createTestPhoto({ lastError: 'Network timeout' })
+      await db.photos.add(photo)
+      
+      const retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.lastError).toBe('Network timeout')
+    })
+
+    it('should store lastAttemptAt field', async () => {
+      const timestamp = '2026-01-31T12:00:00.000Z'
+      const photo = createTestPhoto({ lastAttemptAt: timestamp })
+      await db.photos.add(photo)
+      
+      const retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.lastAttemptAt).toBe(timestamp)
+    })
+
+    it('should allow null values for retry fields', async () => {
+      const photo = createTestPhoto({
+        retryCount: 0,
+        lastError: null,
+        lastAttemptAt: null,
+      })
+      await db.photos.add(photo)
+      
+      const retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.retryCount).toBe(0)
+      expect(retrieved?.lastError).toBeNull()
+      expect(retrieved?.lastAttemptAt).toBeNull()
+    })
+
+    it('should allow undefined retry fields (backward compatibility)', async () => {
+      // Create a photo without retry fields (simulating v1 data)
+      const photo: OfflinePhoto = {
+        id: generatePhotoId(),
+        jobOrderId: 'job-123',
+        checklistItemId: 'checklist-456',
+        stage: 'job_start',
+        photoType: 'cargo_before',
+        blob: new Blob(['test'], { type: 'image/jpeg' }),
+        metadata: {
+          takenAt: new Date().toISOString(),
+          gpsLatitude: null,
+          gpsLongitude: null,
+          gpsAccuracy: null,
+        },
+        notes: null,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        // No retry fields - simulating v1 data
+      }
+      
+      await db.photos.add(photo)
+      const retrieved = await db.photos.get(photo.id)
+      
+      // Should be retrievable even without retry fields
+      expect(retrieved).toBeDefined()
+      expect(retrieved?.id).toBe(photo.id)
+    })
+
+    it('should update retry fields independently', async () => {
+      const photo = createTestPhoto({
+        retryCount: 0,
+        lastError: null,
+        lastAttemptAt: null,
+      })
+      await db.photos.add(photo)
+      
+      // Update retry count
+      await db.photos.update(photo.id, { retryCount: 1 })
+      let retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.retryCount).toBe(1)
+      expect(retrieved?.lastError).toBeNull()
+      
+      // Update last error
+      await db.photos.update(photo.id, { lastError: 'Connection failed' })
+      retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.retryCount).toBe(1)
+      expect(retrieved?.lastError).toBe('Connection failed')
+      
+      // Update last attempt timestamp
+      const timestamp = new Date().toISOString()
+      await db.photos.update(photo.id, { lastAttemptAt: timestamp })
+      retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.lastAttemptAt).toBe(timestamp)
+    })
+
+    it('should support incrementing retryCount', async () => {
+      const photo = createTestPhoto({ retryCount: 0 })
+      await db.photos.add(photo)
+      
+      // Simulate retry increments
+      for (let i = 1; i <= 3; i++) {
+        const current = await db.photos.get(photo.id)
+        await db.photos.update(photo.id, { retryCount: (current?.retryCount || 0) + 1 })
+        
+        const updated = await db.photos.get(photo.id)
+        expect(updated?.retryCount).toBe(i)
+      }
+    })
+
+    it('should store all retry fields together', async () => {
+      const timestamp = '2026-01-31T14:30:00.000Z'
+      const photo = createTestPhoto({
+        status: 'failed',
+        retryCount: 3,
+        lastError: 'Storage quota exceeded',
+        lastAttemptAt: timestamp,
+      })
+      await db.photos.add(photo)
+      
+      const retrieved = await db.photos.get(photo.id)
+      expect(retrieved?.status).toBe('failed')
+      expect(retrieved?.retryCount).toBe(3)
+      expect(retrieved?.lastError).toBe('Storage quota exceeded')
+      expect(retrieved?.lastAttemptAt).toBe(timestamp)
+    })
+  })
+
+  describe('Database version migration', () => {
+    it('should have database version 2', () => {
+      // The database should be at version 2 after the migration
+      expect(db.verno).toBe(2)
+    })
+  })
+})
+
+
+// ============================================
+// RETRY MANAGEMENT HELPER FUNCTIONS TESTS (v0.5)
+// ============================================
+
+describe('Retry Management Helper Functions (v0.5)', () => {
+  beforeEach(async () => {
+    await clearAllPhotos()
+  })
+
+  afterEach(async () => {
+    await clearAllPhotos()
+  })
+
+  describe('getUploadablePhotos', () => {
+    it('should return pending photos', async () => {
+      const pending = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(pending)
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(pending.id)
+    })
+
+    it('should return failed photos with retryCount < maxRetries', async () => {
+      const failed = createTestPhoto({ status: 'failed', retryCount: 1 })
+      await db.photos.add(failed)
+      
+      const result = await getUploadablePhotos(3)
+      
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(failed.id)
+    })
+
+    it('should NOT return failed photos with retryCount >= maxRetries', async () => {
+      const failed = createTestPhoto({ status: 'failed', retryCount: 3 })
+      await db.photos.add(failed)
+      
+      const result = await getUploadablePhotos(3)
+      
+      expect(result).toHaveLength(0)
+    })
+
+    it('should NOT return uploading photos', async () => {
+      const uploading = createTestPhoto({ status: 'uploading', retryCount: 0 })
+      await db.photos.add(uploading)
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(0)
+    })
+
+    it('should return photos sorted by createdAt ascending (FIFO)', async () => {
+      const older = createTestPhoto({
+        status: 'pending',
+        createdAt: '2026-01-31T10:00:00.000Z',
+      })
+      const newer = createTestPhoto({
+        status: 'pending',
+        createdAt: '2026-01-31T12:00:00.000Z',
+      })
+      const middle = createTestPhoto({
+        status: 'pending',
+        createdAt: '2026-01-31T11:00:00.000Z',
+      })
+      
+      // Add in random order
+      await db.photos.bulkAdd([newer, older, middle])
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(3)
+      expect(result[0].id).toBe(older.id)
+      expect(result[1].id).toBe(middle.id)
+      expect(result[2].id).toBe(newer.id)
+    })
+
+    it('should use default maxRetries of 3', async () => {
+      const retry2 = createTestPhoto({ status: 'failed', retryCount: 2 })
+      const retry3 = createTestPhoto({ status: 'failed', retryCount: 3 })
+      
+      await db.photos.bulkAdd([retry2, retry3])
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(retry2.id)
+    })
+
+    it('should respect custom maxRetries parameter', async () => {
+      const retry1 = createTestPhoto({ status: 'failed', retryCount: 1 })
+      const retry2 = createTestPhoto({ status: 'failed', retryCount: 2 })
+      
+      await db.photos.bulkAdd([retry1, retry2])
+      
+      const result = await getUploadablePhotos(2)
+      
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(retry1.id)
+    })
+
+    it('should handle photos with undefined retryCount (backward compatibility)', async () => {
+      // Create a photo without retryCount (simulating v1 data)
+      const photo: OfflinePhoto = {
+        id: generatePhotoId(),
+        jobOrderId: 'job-123',
+        checklistItemId: 'checklist-456',
+        stage: 'job_start',
+        photoType: 'cargo_before',
+        blob: new Blob(['test'], { type: 'image/jpeg' }),
+        metadata: {
+          takenAt: new Date().toISOString(),
+          gpsLatitude: null,
+          gpsLongitude: null,
+          gpsAccuracy: null,
+        },
+        notes: null,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        // No retryCount - simulating v1 data
+      }
+      
+      await db.photos.add(photo)
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(photo.id)
+    })
+
+    it('should return empty array when no uploadable photos', async () => {
+      const uploading = createTestPhoto({ status: 'uploading' })
+      const maxedOut = createTestPhoto({ status: 'failed', retryCount: 5 })
+      
+      await db.photos.bulkAdd([uploading, maxedOut])
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(0)
+    })
+
+    it('should return both pending and failed photos together', async () => {
+      const pending = createTestPhoto({ status: 'pending', retryCount: 0 })
+      const failed = createTestPhoto({ status: 'failed', retryCount: 1 })
+      
+      await db.photos.bulkAdd([pending, failed])
+      
+      const result = await getUploadablePhotos()
+      
+      expect(result).toHaveLength(2)
+    })
+  })
+
+  describe('updatePhotoRetry', () => {
+    it('should increment retryCount by 1', async () => {
+      const photo = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      await updatePhotoRetry(photo.id, 'Network error')
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(1)
+    })
+
+    it('should set status to failed', async () => {
+      const photo = createTestPhoto({ status: 'uploading', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      await updatePhotoRetry(photo.id, 'Network error')
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.status).toBe('failed')
+    })
+
+    it('should set lastError to the error message', async () => {
+      const photo = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      await updatePhotoRetry(photo.id, 'Storage quota exceeded')
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.lastError).toBe('Storage quota exceeded')
+    })
+
+    it('should set lastAttemptAt to current timestamp', async () => {
+      const photo = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      const beforeUpdate = new Date()
+      await updatePhotoRetry(photo.id, 'Network error')
+      const afterUpdate = new Date()
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.lastAttemptAt).toBeDefined()
+      
+      const attemptTime = new Date(updated!.lastAttemptAt!)
+      expect(attemptTime.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime())
+      expect(attemptTime.getTime()).toBeLessThanOrEqual(afterUpdate.getTime())
+    })
+
+    it('should handle multiple retry increments', async () => {
+      const photo = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      await updatePhotoRetry(photo.id, 'Error 1')
+      await updatePhotoRetry(photo.id, 'Error 2')
+      await updatePhotoRetry(photo.id, 'Error 3')
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(3)
+      expect(updated?.lastError).toBe('Error 3')
+    })
+
+    it('should handle undefined retryCount (backward compatibility)', async () => {
+      // Create a photo without retryCount
+      const photo: OfflinePhoto = {
+        id: generatePhotoId(),
+        jobOrderId: 'job-123',
+        checklistItemId: 'checklist-456',
+        stage: 'job_start',
+        photoType: 'cargo_before',
+        blob: new Blob(['test'], { type: 'image/jpeg' }),
+        metadata: {
+          takenAt: new Date().toISOString(),
+          gpsLatitude: null,
+          gpsLongitude: null,
+          gpsAccuracy: null,
+        },
+        notes: null,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        // No retryCount
+      }
+      await db.photos.add(photo)
+      
+      await updatePhotoRetry(photo.id, 'Network error')
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(1)
+    })
+
+    it('should not throw when photo does not exist', async () => {
+      await expect(updatePhotoRetry('non-existent-id', 'Error')).resolves.not.toThrow()
+    })
+
+    it('should preserve other photo fields', async () => {
+      const photo = createTestPhoto({
+        status: 'pending',
+        retryCount: 0,
+        jobOrderId: 'job-preserve',
+        notes: 'Important note',
+      })
+      await db.photos.add(photo)
+      
+      await updatePhotoRetry(photo.id, 'Network error')
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.jobOrderId).toBe('job-preserve')
+      expect(updated?.notes).toBe('Important note')
+      expect(updated?.blob).toBeInstanceOf(Blob)
+    })
+  })
+
+  describe('resetPhotoRetry', () => {
+    it('should reset retryCount to 0', async () => {
+      const photo = createTestPhoto({ status: 'failed', retryCount: 3 })
+      await db.photos.add(photo)
+      
+      await resetPhotoRetry(photo.id)
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(0)
+    })
+
+    it('should set status to pending', async () => {
+      const photo = createTestPhoto({ status: 'failed', retryCount: 3 })
+      await db.photos.add(photo)
+      
+      await resetPhotoRetry(photo.id)
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.status).toBe('pending')
+    })
+
+    it('should set lastError to null', async () => {
+      const photo = createTestPhoto({
+        status: 'failed',
+        retryCount: 3,
+        lastError: 'Previous error',
+      })
+      await db.photos.add(photo)
+      
+      await resetPhotoRetry(photo.id)
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.lastError).toBeNull()
+    })
+
+    it('should set lastAttemptAt to null', async () => {
+      const photo = createTestPhoto({
+        status: 'failed',
+        retryCount: 3,
+        lastAttemptAt: '2026-01-31T12:00:00.000Z',
+      })
+      await db.photos.add(photo)
+      
+      await resetPhotoRetry(photo.id)
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.lastAttemptAt).toBeNull()
+    })
+
+    it('should make photo uploadable again after reset', async () => {
+      const photo = createTestPhoto({ status: 'failed', retryCount: 5 })
+      await db.photos.add(photo)
+      
+      // Before reset - not uploadable
+      let uploadable = await getUploadablePhotos(3)
+      expect(uploadable).toHaveLength(0)
+      
+      // Reset
+      await resetPhotoRetry(photo.id)
+      
+      // After reset - uploadable
+      uploadable = await getUploadablePhotos(3)
+      expect(uploadable).toHaveLength(1)
+      expect(uploadable[0].id).toBe(photo.id)
+    })
+
+    it('should preserve other photo fields', async () => {
+      const photo = createTestPhoto({
+        status: 'failed',
+        retryCount: 3,
+        jobOrderId: 'job-preserve',
+        notes: 'Important note',
+        lastError: 'Previous error',
+      })
+      await db.photos.add(photo)
+      
+      await resetPhotoRetry(photo.id)
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.jobOrderId).toBe('job-preserve')
+      expect(updated?.notes).toBe('Important note')
+      expect(updated?.blob).toBeInstanceOf(Blob)
+    })
+
+    it('should not throw when photo does not exist', async () => {
+      await expect(resetPhotoRetry('non-existent-id')).resolves.not.toThrow()
+    })
+
+    it('should work on pending photos (no-op scenario)', async () => {
+      const photo = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      await resetPhotoRetry(photo.id)
+      
+      const updated = await db.photos.get(photo.id)
+      expect(updated?.status).toBe('pending')
+      expect(updated?.retryCount).toBe(0)
+    })
+  })
+
+  describe('Integration: updatePhotoRetry and resetPhotoRetry', () => {
+    it('should allow retry cycle: fail -> reset -> fail again', async () => {
+      const photo = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.add(photo)
+      
+      // First failure cycle
+      await updatePhotoRetry(photo.id, 'Error 1')
+      await updatePhotoRetry(photo.id, 'Error 2')
+      await updatePhotoRetry(photo.id, 'Error 3')
+      
+      let updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(3)
+      expect(updated?.status).toBe('failed')
+      
+      // Reset for manual retry
+      await resetPhotoRetry(photo.id)
+      
+      updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(0)
+      expect(updated?.status).toBe('pending')
+      
+      // Second failure cycle
+      await updatePhotoRetry(photo.id, 'Error 4')
+      
+      updated = await db.photos.get(photo.id)
+      expect(updated?.retryCount).toBe(1)
+      expect(updated?.lastError).toBe('Error 4')
+    })
+
+    it('should correctly filter uploadable photos after retry cycles', async () => {
+      const photo1 = createTestPhoto({ status: 'pending', retryCount: 0 })
+      const photo2 = createTestPhoto({ status: 'pending', retryCount: 0 })
+      await db.photos.bulkAdd([photo1, photo2])
+      
+      // Fail photo1 3 times
+      await updatePhotoRetry(photo1.id, 'Error')
+      await updatePhotoRetry(photo1.id, 'Error')
+      await updatePhotoRetry(photo1.id, 'Error')
+      
+      // Fail photo2 1 time
+      await updatePhotoRetry(photo2.id, 'Error')
+      
+      // Only photo2 should be uploadable
+      let uploadable = await getUploadablePhotos(3)
+      expect(uploadable).toHaveLength(1)
+      expect(uploadable[0].id).toBe(photo2.id)
+      
+      // Reset photo1
+      await resetPhotoRetry(photo1.id)
+      
+      // Both should be uploadable now
+      uploadable = await getUploadablePhotos(3)
+      expect(uploadable).toHaveLength(2)
+    })
   })
 })
