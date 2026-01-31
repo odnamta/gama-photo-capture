@@ -7,7 +7,6 @@ import { ChecklistStepView } from '@/components/molecules/checklist-step-view'
 import { PhotoPreviewSheet } from '@/components/molecules/photo-preview-sheet'
 import { CaptureCompleteSummary } from '@/components/molecules/capture-complete-summary'
 import { useCaptureSession } from '@/hooks/use-capture-session'
-import { useGeolocation } from '@/hooks/use-geolocation'
 import { savePhotoToIndexedDB } from '@/lib/offline/db'
 import { cn } from '@/lib/utils'
 import type { PhotoChecklistItem, JobStage } from '@/types/job'
@@ -167,9 +166,6 @@ export function GuidedCaptureSession({
   // Exit confirmation dialog state
   const [showExitDialog, setShowExitDialog] = useState(false)
   
-  // Geolocation hook for GPS capture
-  const { getCurrentPosition } = useGeolocation()
-  
   // Capture session state management
   const existingPhotoIds = existingPhotos.map(p => p.checklistItemId)
   const session = useCaptureSession({
@@ -195,38 +191,25 @@ export function GuidedCaptureSession({
   // ============================================
 
   /**
-   * Handle photo capture from camera placeholder
-   * Gets GPS coordinates and transitions to preview state
+   * Handle photo capture from CameraCapture component
+   * Receives blob and metadata directly from the camera
+   * 
+   * @validates Requirements 3.5, 8.3
    */
-  const handleCapture = useCallback(async () => {
-    // Create a placeholder blob for v0.3 (real camera in v0.4)
-    // In production, this would come from the camera
-    const placeholderBlob = await createPlaceholderBlob()
-    
-    // Get GPS coordinates (non-blocking)
-    const gpsResult = await getCurrentPosition({ timeout: 5000 })
-    
-    // Create capture metadata
-    const metadata: CaptureMetadata = {
-      takenAt: new Date(),
-      gpsLatitude: gpsResult.success ? gpsResult.coordinates.latitude : null,
-      gpsLongitude: gpsResult.success ? gpsResult.coordinates.longitude : null,
-      gpsAccuracy: gpsResult.success ? gpsResult.coordinates.accuracy : null
-    }
-    
+  const handleCapture = useCallback(async (blob: Blob, metadata: CaptureMetadata) => {
     // Create blob URL for preview
-    const blobUrl = URL.createObjectURL(placeholderBlob)
+    const blobUrl = URL.createObjectURL(blob)
     
     // Create preview photo data
     const previewPhoto: PreviewPhotoData = {
       blobUrl,
-      blob: placeholderBlob,
+      blob,
       metadata
     }
     
     // Transition to preview state
     capture(previewPhoto)
-  }, [capture, getCurrentPosition])
+  }, [capture])
 
   /**
    * Handle photo confirmation
@@ -452,43 +435,6 @@ function getStageTitle(stage: JobStage, locale: 'en' | 'id'): string {
     job_end: { en: 'Job End', id: 'Selesai Pekerjaan' }
   }
   return titles[stage][locale]
-}
-
-/**
- * Create a placeholder blob for v0.3 testing
- * In v0.4, this will be replaced with actual camera capture
- */
-async function createPlaceholderBlob(): Promise<Blob> {
-  // Create a simple gray placeholder image using canvas
-  const canvas = document.createElement('canvas')
-  canvas.width = 640
-  canvas.height = 480
-  const ctx = canvas.getContext('2d')
-  
-  if (ctx) {
-    // Fill with gray background
-    ctx.fillStyle = '#e5e7eb'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    
-    // Add placeholder text
-    ctx.fillStyle = '#6b7280'
-    ctx.font = '24px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('Photo Placeholder', canvas.width / 2, canvas.height / 2 - 20)
-    ctx.font = '16px sans-serif'
-    ctx.fillText('(Camera in v0.4)', canvas.width / 2, canvas.height / 2 + 20)
-    
-    // Add timestamp
-    ctx.font = '12px sans-serif'
-    ctx.fillText(new Date().toLocaleString(), canvas.width / 2, canvas.height / 2 + 50)
-  }
-  
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
-      resolve(blob || new Blob(['placeholder'], { type: 'image/jpeg' }))
-    }, 'image/jpeg', 0.8)
-  })
 }
 
 export default GuidedCaptureSession

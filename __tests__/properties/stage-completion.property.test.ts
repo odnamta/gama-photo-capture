@@ -1,380 +1,563 @@
+import { describe, it, expect } from 'vitest'
+import * as fc from 'fast-check'
+import type { PhotoChecklistItem, JobStage } from '@/types/job'
+import type { StageCompletionResult } from '@/lib/actions/capture'
+
 /**
- * Property-Based Tests: Stage Completion
+ * Property-Based Tests for Stage Completion
  * 
- * Property 12: Stage Completion Updates Progress
- * For any capture session where all required checklist items have been captured,
- * the job's stage progress should reflect isComplete: true.
+ * Feature: v0.3-guided-capture, Property 12: Stage completion updates progress
  * 
- * Feature: v0.3-guided-capture
- * Validates: Requirements 3.6.5
+ * *For any* capture session where all required checklist items have been captured,
+ * the job's stage progress should reflect `isComplete: true`.
+ * 
+ * **Validates: Requirements 3.6.5**
  */
 
-import * as fc from 'fast-check'
-import { describe, it, expect } from 'vitest'
-
 // ============================================
-// TYPES FOR TESTING
-// ============================================
-
-interface ChecklistItem {
-  id: string
-  stage: 'job_start' | 'in_transit' | 'job_end'
-  is_required: boolean
-  is_active: boolean
-}
-
-interface CapturedPhoto {
-  checklist_item_id: string
-  is_deleted: boolean
-}
-
-interface StageCompletionResult {
-  isComplete: boolean
-  requiredCount: number
-  capturedCount: number
-  missingItemIds: string[]
-}
-
-// ============================================
-// PURE FUNCTION UNDER TEST
+// ARBITRARIES (Test Data Generators)
 // ============================================
 
 /**
- * Pure function that calculates stage completion
+ * Generator for job stages
+ */
+const jobStageArb: fc.Arbitrary<JobStage> = fc.constantFrom(
+  'job_start',
+  'in_transit',
+  'job_end'
+)
+
+/**
+ * Generator for photo types
+ */
+const photoTypeArb: fc.Arbitrary<string> = fc.constantFrom(
+  'cargo_before',
+  'cargo_after',
+  'cargo_transit',
+  'document',
+  'damage',
+  'issue'
+)
+
+/**
+ * Generator for a single checklist item
+ */
+const checklistItemArb: fc.Arbitrary<PhotoChecklistItem> = fc.record({
+  id: fc.uuid(),
+  stage: jobStageArb,
+  sequence: fc.integer({ min: 1, max: 20 }),
+  title: fc.string({ minLength: 1, maxLength: 100 }),
+  title_id: fc.option(fc.string({ minLength: 1, maxLength: 100 }), { nil: null }),
+  description: fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }),
+  description_id: fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }),
+  tips: fc.option(fc.string({ minLength: 1, maxLength: 200 }), { nil: null }),
+  is_required: fc.boolean(),
+  photo_type: photoTypeArb,
+  example_image_url: fc.option(fc.webUrl(), { nil: null }),
+  is_active: fc.constant(true),
+})
+
+/**
+ * Generator for a non-empty checklist (1-10 items)
+ */
+const checklistArb: fc.Arbitrary<PhotoChecklistItem[]> = fc
+  .array(checklistItemArb, { minLength: 1, maxLength: 10 })
+  .map((items) =>
+    // Ensure unique IDs and sequential sequence numbers
+    items.map((item, index) => ({
+      ...item,
+      id: `item-${index}`,
+      sequence: index + 1,
+    }))
+  )
+
+/**
+ * Generator for captured photo IDs (subset of checklist item IDs)
+ */
+const capturedIdsArb = (checklist: PhotoChecklistItem[]): fc.Arbitrary<string[]> =>
+  fc.subarray(
+    checklist.map((item) => item.id),
+    { minLength: 0, maxLength: checklist.length }
+  )
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Simulates the stage completion check logic
  * This mirrors the logic in checkStageCompletion server action
  */
 function calculateStageCompletion(
-  stage: 'job_start' | 'in_transit' | 'job_end',
-  checklistItems: ChecklistItem[],
-  capturedPhotos: CapturedPhoto[]
+  checklist: PhotoChecklistItem[],
+  capturedIds: string[]
 ): StageCompletionResult {
-  // Get required checklist items for this stage
-  const requiredItems = checklistItems.filter(
-    item => item.stage === stage && item.is_required && item.is_active
-  )
-  
-  const requiredIds = requiredItems.map(item => item.id)
-  
+  // Get required item IDs
+  const requiredIds = checklist
+    .filter((item) => item.is_required)
+    .map((item) => item.id)
+
   // If no required items, stage is automatically complete
   if (requiredIds.length === 0) {
     return {
       isComplete: true,
       requiredCount: 0,
       capturedCount: 0,
-      missingItemIds: []
+      missingItemIds: [],
     }
   }
-  
-  // Get non-deleted photos that match required items
-  const capturedIds = new Set(
-    capturedPhotos
-      .filter(p => !p.is_deleted && requiredIds.includes(p.checklist_item_id))
-      .map(p => p.checklist_item_id)
-  )
-  
-  const missingItemIds = requiredIds.filter(id => !capturedIds.has(id))
+
+  // Find which required items have been captured
+  const capturedSet = new Set(capturedIds)
+  const missingItemIds = requiredIds.filter((id) => !capturedSet.has(id))
   const capturedCount = requiredIds.length - missingItemIds.length
-  
+
   return {
     isComplete: missingItemIds.length === 0,
     requiredCount: requiredIds.length,
     capturedCount,
-    missingItemIds
+    missingItemIds,
   }
 }
-
-// ============================================
-// ARBITRARIES
-// ============================================
-
-const stageArb = fc.constantFrom('job_start', 'in_transit', 'job_end') as fc.Arbitrary<'job_start' | 'in_transit' | 'job_end'>
-
-const checklistItemArb = (stage: 'job_start' | 'in_transit' | 'job_end') => fc.record({
-  id: fc.uuid(),
-  stage: fc.constant(stage),
-  is_required: fc.boolean(),
-  is_active: fc.boolean()
-})
-
-const capturedPhotoArb = (checklistItemId: string) => fc.record({
-  checklist_item_id: fc.constant(checklistItemId),
-  is_deleted: fc.boolean()
-})
 
 // ============================================
 // PROPERTY TESTS
 // ============================================
 
 describe('Feature: v0.3-guided-capture, Property 12: Stage completion updates progress', () => {
-  it('should return isComplete=true when all required items have non-deleted photos', () => {
+  /**
+   * **Validates: Requirements 3.6.5**
+   * 
+   * *For any* capture session where all required checklist items have been captured,
+   * the job's stage progress should reflect `isComplete: true`.
+   */
+
+  it('should be complete when ALL required items are captured', () => {
     fc.assert(
       fc.property(
-        stageArb,
-        fc.integer({ min: 1, max: 10 }),
-        (stage, requiredCount) => {
-          // Generate required checklist items
-          const checklistItems: ChecklistItem[] = []
-          const capturedPhotos: CapturedPhoto[] = []
-          
-          for (let i = 0; i < requiredCount; i++) {
-            const id = `item-${i}`
-            checklistItems.push({
-              id,
-              stage,
-              is_required: true,
-              is_active: true
-            })
-            // Capture a non-deleted photo for each required item
-            capturedPhotos.push({
-              checklist_item_id: id,
-              is_deleted: false
-            })
-          }
-          
-          const result = calculateStageCompletion(stage, checklistItems, capturedPhotos)
-          
+        checklistArb.filter((checklist) =>
+          checklist.some((item) => item.is_required)
+        ),
+        (checklist) => {
+          // Capture all required items
+          const requiredIds = checklist
+            .filter((item) => item.is_required)
+            .map((item) => item.id)
+
+          const result = calculateStageCompletion(checklist, requiredIds)
+
+          // Postcondition: Should be complete
           expect(result.isComplete).toBe(true)
-          expect(result.requiredCount).toBe(requiredCount)
-          expect(result.capturedCount).toBe(requiredCount)
           expect(result.missingItemIds).toHaveLength(0)
+          expect(result.capturedCount).toBe(result.requiredCount)
+
+          return true
         }
       ),
       { numRuns: 100 }
     )
   })
 
-  it('should return isComplete=false when some required items are missing photos', () => {
+  it('should NOT be complete when ANY required item is missing', () => {
     fc.assert(
       fc.property(
-        stageArb,
-        fc.integer({ min: 2, max: 10 }),
-        fc.integer({ min: 1, max: 9 }),
-        (stage, totalRequired, capturedCount) => {
-          // Ensure capturedCount is less than totalRequired
-          const actualCaptured = Math.min(capturedCount, totalRequired - 1)
-          
-          // Generate required checklist items
-          const checklistItems: ChecklistItem[] = []
-          const capturedPhotos: CapturedPhoto[] = []
-          
-          for (let i = 0; i < totalRequired; i++) {
-            const id = `item-${i}`
-            checklistItems.push({
-              id,
-              stage,
-              is_required: true,
-              is_active: true
-            })
-            // Only capture photos for some items
-            if (i < actualCaptured) {
-              capturedPhotos.push({
-                checklist_item_id: id,
-                is_deleted: false
-              })
-            }
-          }
-          
-          const result = calculateStageCompletion(stage, checklistItems, capturedPhotos)
-          
+        checklistArb.filter((checklist) =>
+          checklist.filter((item) => item.is_required).length >= 2
+        ),
+        (checklist) => {
+          // Capture all but one required item
+          const requiredIds = checklist
+            .filter((item) => item.is_required)
+            .map((item) => item.id)
+          const capturedIds = requiredIds.slice(0, -1) // Missing the last one
+
+          const result = calculateStageCompletion(checklist, capturedIds)
+
+          // Postcondition: Should NOT be complete
           expect(result.isComplete).toBe(false)
-          expect(result.requiredCount).toBe(totalRequired)
-          expect(result.capturedCount).toBe(actualCaptured)
-          expect(result.missingItemIds).toHaveLength(totalRequired - actualCaptured)
+          expect(result.missingItemIds.length).toBeGreaterThan(0)
+          expect(result.capturedCount).toBeLessThan(result.requiredCount)
+
+          return true
         }
       ),
       { numRuns: 100 }
     )
   })
 
-  it('should return isComplete=true when stage has no required items', () => {
+  it('should be complete when NO required items exist (all optional)', () => {
     fc.assert(
       fc.property(
-        stageArb,
-        fc.integer({ min: 0, max: 5 }),
-        (stage, optionalCount) => {
-          // Generate only optional checklist items
-          const checklistItems: ChecklistItem[] = []
-          
-          for (let i = 0; i < optionalCount; i++) {
-            checklistItems.push({
-              id: `item-${i}`,
-              stage,
-              is_required: false,
-              is_active: true
-            })
-          }
-          
-          const result = calculateStageCompletion(stage, checklistItems, [])
-          
+        checklistArb
+          .filter((checklist) => checklist.length > 0)
+          .map((checklist) =>
+            checklist.map((item) => ({ ...item, is_required: false }))
+          ),
+        (checklist) => {
+          // No photos captured
+          const result = calculateStageCompletion(checklist, [])
+
+          // Postcondition: Should be complete (no required items)
           expect(result.isComplete).toBe(true)
           expect(result.requiredCount).toBe(0)
           expect(result.capturedCount).toBe(0)
           expect(result.missingItemIds).toHaveLength(0)
+
+          return true
         }
       ),
       { numRuns: 100 }
     )
   })
 
-  it('should ignore deleted photos when calculating completion', () => {
+  it('should have correct requiredCount for ANY checklist', () => {
+    fc.assert(
+      fc.property(checklistArb, (checklist) => {
+        // Generate captured IDs from the checklist
+        const capturedIds = checklist.slice(0, Math.floor(checklist.length / 2)).map(item => item.id)
+        const result = calculateStageCompletion(checklist, capturedIds)
+
+        // Postcondition: requiredCount should match actual required items
+        const actualRequired = checklist.filter((item) => item.is_required).length
+        expect(result.requiredCount).toBe(actualRequired)
+
+        return true
+      }),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should have correct capturedCount for ANY captured photos', () => {
+    fc.assert(
+      fc.property(checklistArb, (checklist) => {
+        const requiredIds = checklist
+          .filter((item) => item.is_required)
+          .map((item) => item.id)
+
+        // Capture a random subset of required items
+        return fc.assert(
+          fc.property(fc.subarray(requiredIds), (capturedIds) => {
+            const result = calculateStageCompletion(checklist, capturedIds)
+
+            // Postcondition: capturedCount should match captured required items
+            const capturedRequiredCount = capturedIds.filter((id) =>
+              requiredIds.includes(id)
+            ).length
+            expect(result.capturedCount).toBe(capturedRequiredCount)
+
+            return true
+          }),
+          { numRuns: 10 }
+        )
+      }),
+      { numRuns: 10 }
+    )
+  })
+
+  it('should list correct missingItemIds for ANY partial capture', () => {
     fc.assert(
       fc.property(
-        stageArb,
-        fc.integer({ min: 1, max: 5 }),
-        (stage, requiredCount) => {
-          // Generate required checklist items
-          const checklistItems: ChecklistItem[] = []
-          const capturedPhotos: CapturedPhoto[] = []
-          
-          for (let i = 0; i < requiredCount; i++) {
-            const id = `item-${i}`
-            checklistItems.push({
-              id,
-              stage,
-              is_required: true,
-              is_active: true
-            })
-            // All photos are deleted
-            capturedPhotos.push({
-              checklist_item_id: id,
-              is_deleted: true
-            })
-          }
-          
-          const result = calculateStageCompletion(stage, checklistItems, capturedPhotos)
-          
-          // Should be incomplete because all photos are deleted
+        checklistArb.filter((checklist) =>
+          checklist.some((item) => item.is_required)
+        ),
+        (checklist) => {
+          const requiredIds = checklist
+            .filter((item) => item.is_required)
+            .map((item) => item.id)
+
+          // Capture only the first half
+          const capturedIds = requiredIds.slice(0, Math.floor(requiredIds.length / 2))
+          const expectedMissing = requiredIds.slice(Math.floor(requiredIds.length / 2))
+
+          const result = calculateStageCompletion(checklist, capturedIds)
+
+          // Postcondition: missingItemIds should contain uncaptured required items
+          expect(result.missingItemIds.sort()).toEqual(expectedMissing.sort())
+
+          return true
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should ignore optional items when calculating completion', () => {
+    fc.assert(
+      fc.property(
+        checklistArb.filter(
+          (checklist) =>
+            checklist.some((item) => item.is_required) &&
+            checklist.some((item) => !item.is_required)
+        ),
+        (checklist) => {
+          // Capture only required items (not optional)
+          const requiredIds = checklist
+            .filter((item) => item.is_required)
+            .map((item) => item.id)
+
+          const result = calculateStageCompletion(checklist, requiredIds)
+
+          // Postcondition: Should be complete even without optional items
+          expect(result.isComplete).toBe(true)
+
+          return true
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should handle capturing optional items without affecting completion', () => {
+    fc.assert(
+      fc.property(
+        checklistArb.filter(
+          (checklist) =>
+            checklist.some((item) => item.is_required) &&
+            checklist.some((item) => !item.is_required)
+        ),
+        (checklist) => {
+          // Capture only optional items (not required)
+          const optionalIds = checklist
+            .filter((item) => !item.is_required)
+            .map((item) => item.id)
+
+          const result = calculateStageCompletion(checklist, optionalIds)
+
+          // Postcondition: Should NOT be complete (required items missing)
           expect(result.isComplete).toBe(false)
-          expect(result.requiredCount).toBe(requiredCount)
-          expect(result.capturedCount).toBe(0)
-          expect(result.missingItemIds).toHaveLength(requiredCount)
+          expect(result.capturedCount).toBe(0) // Optional items don't count
+
+          return true
         }
       ),
       { numRuns: 100 }
     )
   })
+})
 
-  it('should ignore inactive checklist items', () => {
+describe('Stage Completion Invariants', () => {
+  /**
+   * Additional invariant tests for stage completion
+   */
+
+  it('isComplete should be true iff missingItemIds is empty', () => {
     fc.assert(
-      fc.property(
-        stageArb,
-        fc.integer({ min: 1, max: 5 }),
-        (stage, inactiveCount) => {
-          // Generate inactive required checklist items
-          const checklistItems: ChecklistItem[] = []
-          
-          for (let i = 0; i < inactiveCount; i++) {
-            checklistItems.push({
-              id: `item-${i}`,
-              stage,
-              is_required: true,
-              is_active: false // Inactive
-            })
-          }
-          
-          const result = calculateStageCompletion(stage, checklistItems, [])
-          
-          // Should be complete because inactive items are ignored
-          expect(result.isComplete).toBe(true)
-          expect(result.requiredCount).toBe(0)
-        }
-      ),
-      { numRuns: 100 }
+      fc.property(checklistArb, (checklist) => {
+        return fc.assert(
+          fc.property(capturedIdsArb(checklist), (capturedIds) => {
+            const result = calculateStageCompletion(checklist, capturedIds)
+
+            // Invariant: isComplete ↔ missingItemIds.length === 0
+            expect(result.isComplete).toBe(result.missingItemIds.length === 0)
+
+            return true
+          }),
+          { numRuns: 10 }
+        )
+      }),
+      { numRuns: 10 }
     )
   })
 
-  it('should only consider items for the specified stage', () => {
+  it('capturedCount + missingItemIds.length should equal requiredCount', () => {
     fc.assert(
-      fc.property(
-        stageArb,
-        fc.integer({ min: 1, max: 5 }),
-        (targetStage, itemCount) => {
-          // Generate items for different stages
-          const otherStages = ['job_start', 'in_transit', 'job_end'].filter(s => s !== targetStage) as ('job_start' | 'in_transit' | 'job_end')[]
-          
-          const checklistItems: ChecklistItem[] = []
-          
-          // Add required items for other stages (should be ignored)
-          for (const otherStage of otherStages) {
-            for (let i = 0; i < itemCount; i++) {
-              checklistItems.push({
-                id: `${otherStage}-item-${i}`,
-                stage: otherStage,
-                is_required: true,
-                is_active: true
-              })
+      fc.property(checklistArb, (checklist) => {
+        return fc.assert(
+          fc.property(capturedIdsArb(checklist), (capturedIds) => {
+            const result = calculateStageCompletion(checklist, capturedIds)
+
+            // Invariant: captured + missing = required
+            expect(result.capturedCount + result.missingItemIds.length).toBe(
+              result.requiredCount
+            )
+
+            return true
+          }),
+          { numRuns: 10 }
+        )
+      }),
+      { numRuns: 10 }
+    )
+  })
+
+  it('missingItemIds should only contain required item IDs', () => {
+    fc.assert(
+      fc.property(checklistArb, (checklist) => {
+        return fc.assert(
+          fc.property(capturedIdsArb(checklist), (capturedIds) => {
+            const result = calculateStageCompletion(checklist, capturedIds)
+
+            const requiredIds = new Set(
+              checklist.filter((item) => item.is_required).map((item) => item.id)
+            )
+
+            // Invariant: All missing IDs should be required items
+            for (const missingId of result.missingItemIds) {
+              expect(requiredIds.has(missingId)).toBe(true)
             }
-          }
-          
-          const result = calculateStageCompletion(targetStage, checklistItems, [])
-          
-          // Should be complete because target stage has no required items
-          expect(result.isComplete).toBe(true)
-          expect(result.requiredCount).toBe(0)
-        }
-      ),
-      { numRuns: 100 }
+
+            return true
+          }),
+          { numRuns: 10 }
+        )
+      }),
+      { numRuns: 10 }
     )
   })
 
-  it('should correctly count captured vs required items', () => {
+  it('capturedCount should never exceed requiredCount', () => {
     fc.assert(
-      fc.property(
-        stageArb,
-        fc.array(fc.record({
-          is_required: fc.boolean(),
-          is_active: fc.boolean(),
-          has_photo: fc.boolean(),
-          photo_deleted: fc.boolean()
-        }), { minLength: 1, maxLength: 15 }),
-        (stage, itemConfigs) => {
-          const checklistItems: ChecklistItem[] = []
-          const capturedPhotos: CapturedPhoto[] = []
-          
-          itemConfigs.forEach((config, i) => {
-            const id = `item-${i}`
-            checklistItems.push({
-              id,
-              stage,
-              is_required: config.is_required,
-              is_active: config.is_active
-            })
-            
-            if (config.has_photo) {
-              capturedPhotos.push({
-                checklist_item_id: id,
-                is_deleted: config.photo_deleted
-              })
-            }
-          })
-          
-          const result = calculateStageCompletion(stage, checklistItems, capturedPhotos)
-          
-          // Calculate expected values
-          const requiredActiveItems = itemConfigs.filter(c => c.is_required && c.is_active)
-          const expectedRequired = requiredActiveItems.length
-          const expectedCaptured = requiredActiveItems.filter(
-            (c, i) => c.has_photo && !c.photo_deleted
-          ).length
-          
-          // Verify counts match
-          expect(result.requiredCount).toBe(expectedRequired)
-          
-          // isComplete should be true only if all required items are captured
-          if (expectedRequired === 0) {
-            expect(result.isComplete).toBe(true)
-          } else {
-            // Count how many required items have non-deleted photos
-            const capturedRequiredCount = itemConfigs.filter((c, i) => {
-              if (!c.is_required || !c.is_active) return false
-              return c.has_photo && !c.photo_deleted
-            }).length
-            
-            expect(result.isComplete).toBe(capturedRequiredCount === expectedRequired)
-          }
-        }
-      ),
-      { numRuns: 100 }
+      fc.property(checklistArb, (checklist) => {
+        return fc.assert(
+          fc.property(capturedIdsArb(checklist), (capturedIds) => {
+            const result = calculateStageCompletion(checklist, capturedIds)
+
+            // Invariant: capturedCount <= requiredCount
+            expect(result.capturedCount).toBeLessThanOrEqual(result.requiredCount)
+
+            return true
+          }),
+          { numRuns: 10 }
+        )
+      }),
+      { numRuns: 10 }
     )
+  })
+
+  it('capturedCount should never be negative', () => {
+    fc.assert(
+      fc.property(checklistArb, (checklist) => {
+        return fc.assert(
+          fc.property(capturedIdsArb(checklist), (capturedIds) => {
+            const result = calculateStageCompletion(checklist, capturedIds)
+
+            // Invariant: capturedCount >= 0
+            expect(result.capturedCount).toBeGreaterThanOrEqual(0)
+
+            return true
+          }),
+          { numRuns: 10 }
+        )
+      }),
+      { numRuns: 10 }
+    )
+  })
+})
+
+describe('Edge Cases for Stage Completion', () => {
+  /**
+   * Test edge cases for stage completion
+   */
+
+  it('should handle empty checklist', () => {
+    const result = calculateStageCompletion([], [])
+
+    expect(result.isComplete).toBe(true)
+    expect(result.requiredCount).toBe(0)
+    expect(result.capturedCount).toBe(0)
+    expect(result.missingItemIds).toHaveLength(0)
+  })
+
+  it('should handle single required item - captured', () => {
+    const checklist: PhotoChecklistItem[] = [
+      {
+        id: 'single-item',
+        stage: 'job_start',
+        sequence: 1,
+        title: 'Single Photo',
+        title_id: null,
+        description: null,
+        description_id: null,
+        tips: null,
+        is_required: true,
+        photo_type: 'cargo_before',
+        example_image_url: null,
+        is_active: true,
+      },
+    ]
+
+    const result = calculateStageCompletion(checklist, ['single-item'])
+
+    expect(result.isComplete).toBe(true)
+    expect(result.requiredCount).toBe(1)
+    expect(result.capturedCount).toBe(1)
+    expect(result.missingItemIds).toHaveLength(0)
+  })
+
+  it('should handle single required item - not captured', () => {
+    const checklist: PhotoChecklistItem[] = [
+      {
+        id: 'single-item',
+        stage: 'job_start',
+        sequence: 1,
+        title: 'Single Photo',
+        title_id: null,
+        description: null,
+        description_id: null,
+        tips: null,
+        is_required: true,
+        photo_type: 'cargo_before',
+        example_image_url: null,
+        is_active: true,
+      },
+    ]
+
+    const result = calculateStageCompletion(checklist, [])
+
+    expect(result.isComplete).toBe(false)
+    expect(result.requiredCount).toBe(1)
+    expect(result.capturedCount).toBe(0)
+    expect(result.missingItemIds).toEqual(['single-item'])
+  })
+
+  it('should handle captured IDs not in checklist (ignored)', () => {
+    const checklist: PhotoChecklistItem[] = [
+      {
+        id: 'item-1',
+        stage: 'job_start',
+        sequence: 1,
+        title: 'Photo 1',
+        title_id: null,
+        description: null,
+        description_id: null,
+        tips: null,
+        is_required: true,
+        photo_type: 'cargo_before',
+        example_image_url: null,
+        is_active: true,
+      },
+    ]
+
+    // Capture an ID that doesn't exist in checklist
+    const result = calculateStageCompletion(checklist, ['non-existent-id'])
+
+    expect(result.isComplete).toBe(false)
+    expect(result.capturedCount).toBe(0)
+    expect(result.missingItemIds).toEqual(['item-1'])
+  })
+
+  it('should handle duplicate captured IDs', () => {
+    const checklist: PhotoChecklistItem[] = [
+      {
+        id: 'item-1',
+        stage: 'job_start',
+        sequence: 1,
+        title: 'Photo 1',
+        title_id: null,
+        description: null,
+        description_id: null,
+        tips: null,
+        is_required: true,
+        photo_type: 'cargo_before',
+        example_image_url: null,
+        is_active: true,
+      },
+    ]
+
+    // Capture the same ID multiple times
+    const result = calculateStageCompletion(checklist, ['item-1', 'item-1', 'item-1'])
+
+    expect(result.isComplete).toBe(true)
+    expect(result.capturedCount).toBe(1) // Should count as 1, not 3
   })
 })

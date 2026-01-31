@@ -1,13 +1,17 @@
 'use client'
 
+import { useRef, useCallback } from 'react'
 import { SkipForward } from 'lucide-react'
 import { StepProgressBar } from '@/components/atoms/step-progress-bar'
 import { StepInstructions } from '@/components/atoms/step-instructions'
+import { CameraCapture, type CameraCaptureHandle } from '@/components/organisms/camera-capture'
 import { CameraPlaceholder } from '@/components/atoms/camera-placeholder'
 import { CaptureButton } from '@/components/atoms/capture-button'
 import { Button } from '@/components/ui/button'
 import { getLocalizedContent, getLocalizedContentNullable, type Locale } from '@/lib/utils/locale'
+import { isCameraSupported } from '@/hooks/use-camera'
 import type { PhotoChecklistItem } from '@/types/job'
+import type { CaptureMetadata } from '@/types/capture'
 import { cn } from '@/lib/utils'
 
 interface ChecklistStepViewProps {
@@ -15,7 +19,8 @@ interface ChecklistStepViewProps {
   stepNumber: number
   totalSteps: number
   locale: Locale
-  onCapture: () => void
+  /** Callback when photo is captured with blob and metadata */
+  onCapture: (blob: Blob, metadata: CaptureMetadata) => void
   onSkip?: () => void  // Only provided for optional items
   className?: string
 }
@@ -23,13 +28,13 @@ interface ChecklistStepViewProps {
 /**
  * ChecklistStepView - Molecule component for guided capture step
  * 
- * Combines StepProgressBar, StepInstructions, CameraPlaceholder, and CaptureButton
+ * Combines StepProgressBar, StepInstructions, CameraCapture, and CaptureButton
  * to create a complete step view for the guided capture flow.
  * 
  * Features:
  * - Step progress indicator at the top
  * - Locale-aware instructions (title, description, tips)
- * - Camera placeholder/viewfinder
+ * - Real camera capture (with fallback to file picker if camera not supported)
  * - Large capture button
  * - Skip button for optional items only (is_required=false)
  * 
@@ -40,7 +45,7 @@ interface ChecklistStepViewProps {
  *   stepNumber={1}
  *   totalSteps={5}
  *   locale="en"
- *   onCapture={() => handleCapture()}
+ *   onCapture={(blob, metadata) => handleCapture(blob, metadata)}
  * />
  * 
  * @example
@@ -50,7 +55,7 @@ interface ChecklistStepViewProps {
  *   stepNumber={4}
  *   totalSteps={5}
  *   locale="id"
- *   onCapture={() => handleCapture()}
+ *   onCapture={(blob, metadata) => handleCapture(blob, metadata)}
  *   onSkip={() => handleSkip()}
  * />
  */
@@ -63,6 +68,12 @@ export function ChecklistStepView({
   onSkip,
   className
 }: ChecklistStepViewProps) {
+  // Ref to access CameraCapture's capturePhoto method
+  const cameraRef = useRef<CameraCaptureHandle>(null)
+  
+  // Check if camera is supported
+  const cameraSupported = isCameraSupported()
+
   // Get locale-aware content
   const title = getLocalizedContent(locale, item.title, item.title_id)
   const description = getLocalizedContentNullable(locale, item.description, item.description_id)
@@ -71,6 +82,38 @@ export function ChecklistStepView({
   // Determine if skip button should be shown
   // Skip button is only shown for optional items (is_required=false)
   const showSkipButton = !item.is_required && onSkip !== undefined
+
+  /**
+   * Handle capture button click
+   * Triggers capture via CameraCapture ref
+   */
+  const handleCaptureClick = useCallback(async () => {
+    if (cameraRef.current?.isReady()) {
+      await cameraRef.current.capturePhoto()
+    }
+  }, [])
+
+  /**
+   * Handle capture from CameraCapture component
+   * Passes blob and metadata to parent
+   */
+  const handleCameraCapture = useCallback((blob: Blob, metadata: CaptureMetadata) => {
+    onCapture(blob, metadata)
+  }, [onCapture])
+
+  /**
+   * Handle fallback capture from CameraPlaceholder (file picker)
+   * Creates basic metadata for file-based capture
+   */
+  const handleFallbackCapture = useCallback((blob: Blob) => {
+    const metadata: CaptureMetadata = {
+      takenAt: new Date(),
+      gpsLatitude: null,
+      gpsLongitude: null,
+      gpsAccuracy: null
+    }
+    onCapture(blob, metadata)
+  }, [onCapture])
 
   return (
     <div 
@@ -97,27 +140,35 @@ export function ChecklistStepView({
         />
       </div>
 
-      {/* Camera Placeholder - Flexible height */}
+      {/* Camera Capture - Flexible height */}
       <div className="flex-1 px-4 py-2 min-h-0">
-        <CameraPlaceholder
-          onCapture={(blob) => {
-            // In the full implementation, this would pass the blob
-            // For now, we just trigger the onCapture callback
-            onCapture()
-          }}
-          className="h-full"
-        />
+        {cameraSupported ? (
+          <CameraCapture
+            ref={cameraRef}
+            onCapture={handleCameraCapture}
+            className="h-full"
+          />
+        ) : (
+          <CameraPlaceholder
+            onCapture={handleFallbackCapture}
+            isFallback={true}
+            className="h-full"
+          />
+        )}
       </div>
 
       {/* Action Buttons - Bottom */}
       <div className="px-4 pb-6 pt-4 space-y-3">
-        {/* Main Capture Button - Centered */}
-        <div className="flex justify-center">
-          <CaptureButton 
-            onCapture={onCapture}
-            aria-label={`Capture ${title}`}
-          />
-        </div>
+        {/* Main Capture Button - Only shown when camera is supported */}
+        {cameraSupported && (
+          <div className="flex justify-center">
+            <CaptureButton 
+              onCapture={handleCaptureClick}
+              disabled={!cameraRef.current?.isReady()}
+              aria-label={`Capture ${title}`}
+            />
+          </div>
+        )}
 
         {/* Skip Button - Only for optional items */}
         {showSkipButton && (

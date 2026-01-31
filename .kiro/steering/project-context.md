@@ -149,7 +149,7 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 ```
 
 ## Current State (January 2026)
-- **Status**: v0.3 Guided Capture Flow Complete ✅ | Next: Real Camera Integration (v0.4)
+- **Status**: v0.4 Real Camera + GPS Integration Complete ✅ | Next: Photo Upload + Offline Sync (v0.5)
 - **Phase**: Development
 - **Dependencies**: GAMA ERP v1.0 launch (March 12, 2026)
 - **Planned Start**: April 2026
@@ -175,15 +175,26 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 - [x] Progress tracking per job
 - [x] Handle required vs optional items
 
-### v0.4 Real Camera Integration (Next)
-- [ ] Camera access with getUserMedia API
-- [ ] Front/back camera switching
-- [ ] Photo capture to blob
-- [ ] Image resizing (max 2048px)
-- [ ] EXIF metadata extraction
+### v0.4 Real Camera + GPS Integration ✅
+- [x] Camera access with getUserMedia API
+- [x] Front/back camera switching
+- [x] Photo capture to blob
+- [x] Image resizing (max 2048px)
+- [x] GPS integration with 5-second timeout
+- [x] Camera permission error handling
+- [x] Stream interruption handling
+- [x] Fallback to file picker
+
+### v0.5 Photo Upload + Offline Sync (Next)
+- [ ] Upload photos to Supabase Storage
+- [ ] Create shipment_photos records
+- [ ] Background sync when online
+- [ ] Queue management UI
+- [ ] Retry failed uploads
 
 ## Recent Changes
-- 2026-01-31: v0.3 Guided Capture Complete - Full capture flow with 782 tests, 14 property tests, IndexedDB persistence
+- 2026-01-31: v0.4 Real Camera Complete - getUserMedia, camera switching, GPS, 1235 tests, 131 property tests
+- 2026-01-31: v0.3 Guided Capture Complete - Full capture flow with 793 tests, 14 property tests, IndexedDB persistence
 - 2026-01-31: v0.3 Spec Complete - design.md and tasks.md with 13 correctness properties, 12 implementation tasks
 - 2026-01-31: v0.2.1 Database Types - Manual types/database.ts for type-safe Supabase queries
 - 2026-01-31: v0.2 Job Selection Complete - Job list, job detail, stage cards, stage locking, 131 tests

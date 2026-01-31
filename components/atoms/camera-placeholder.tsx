@@ -1,31 +1,46 @@
 'use client'
 
 import { useRef, useCallback } from 'react'
-import { Camera, ImagePlus } from 'lucide-react'
+import { Camera, ImagePlus, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CameraPlaceholderProps {
   onCapture: (blob: Blob) => void
+  /** Whether this is being used as a fallback when camera is not supported */
+  isFallback?: boolean
   className?: string
 }
 
 /**
- * CameraPlaceholder - Placeholder camera viewfinder for v0.3
+ * CameraPlaceholder - File picker fallback for camera capture
  * 
- * Displays a placeholder UI that simulates a camera viewfinder.
- * Includes a hidden file input for selecting images during testing.
- * When an image is selected, calls onCapture with the image blob.
+ * Displays a placeholder UI that allows users to select images from their device.
+ * Used as a fallback when:
+ * - Camera is not supported (getUserMedia not available)
+ * - Camera permission is permanently denied
+ * - User prefers to select from gallery
  * 
- * This is a temporary component for v0.3. Real camera integration
- * will be implemented in v0.4.
+ * When isFallback is true, shows a message indicating camera is unavailable.
  * 
  * @example
+ * // Normal mode (v0.3 style)
  * <CameraPlaceholder
  *   onCapture={(blob) => handleCapture(blob)}
  * />
+ * 
+ * @example
+ * // Fallback mode (camera not supported)
+ * <CameraPlaceholder
+ *   onCapture={(blob) => handleCapture(blob)}
+ *   isFallback={true}
+ * />
+ * 
+ * @validates Requirements 1.5: Handle browsers that don't support getUserMedia
+ * @validates Requirements 8.5: Provide fallback for unsupported browsers
  */
 export function CameraPlaceholder({
   onCapture,
+  isFallback = false,
   className
 }: CameraPlaceholderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -81,8 +96,9 @@ export function CameraPlaceholder({
           'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
           'active:scale-[0.99]'
         )}
-        aria-label="Tap to capture photo"
+        aria-label={isFallback ? "Camera unavailable, tap to select from gallery" : "Tap to capture photo"}
         data-testid="camera-placeholder"
+        data-fallback={isFallback}
       >
         {/* Viewfinder corners */}
         <div className="absolute inset-4 pointer-events-none">
@@ -98,22 +114,47 @@ export function CameraPlaceholder({
 
         {/* Center content */}
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <div className="relative">
-            <Camera 
-              className="h-12 w-12 text-muted-foreground/60" 
-              aria-hidden="true"
-            />
-            <ImagePlus 
-              className="absolute -bottom-1 -right-1 h-5 w-5 text-primary/70" 
-              aria-hidden="true"
-            />
-          </div>
-          <span className="text-sm font-medium">
-            Tap to capture
-          </span>
-          <span className="text-xs text-muted-foreground/70">
-            or select from gallery
-          </span>
+          {isFallback ? (
+            <>
+              {/* Fallback mode: Show camera unavailable message */}
+              <div className="relative">
+                <Camera 
+                  className="h-12 w-12 text-muted-foreground/40" 
+                  aria-hidden="true"
+                />
+                <AlertCircle 
+                  className="absolute -bottom-1 -right-1 h-5 w-5 text-amber-500" 
+                  aria-hidden="true"
+                />
+              </div>
+              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                Camera unavailable
+              </span>
+              <span className="text-xs text-muted-foreground/70">
+                Tap to select from gallery
+              </span>
+            </>
+          ) : (
+            <>
+              {/* Normal mode: Show tap to capture */}
+              <div className="relative">
+                <Camera 
+                  className="h-12 w-12 text-muted-foreground/60" 
+                  aria-hidden="true"
+                />
+                <ImagePlus 
+                  className="absolute -bottom-1 -right-1 h-5 w-5 text-primary/70" 
+                  aria-hidden="true"
+                />
+              </div>
+              <span className="text-sm font-medium">
+                Tap to capture
+              </span>
+              <span className="text-xs text-muted-foreground/70">
+                or select from gallery
+              </span>
+            </>
+          )}
         </div>
 
         {/* Simulated camera grid overlay */}

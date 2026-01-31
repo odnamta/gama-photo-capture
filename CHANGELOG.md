@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-01-31 - v0.4 Real Camera + GPS Integration Complete
+
+### ✨ Features
+- Real device camera access using getUserMedia API
+- Rear camera by default (facingMode: 'environment')
+- Front/back camera switching on multi-camera devices
+- Photo capture with automatic resize (max 2048px) and JPEG compression (80% quality)
+- GPS integration with 5-second timeout (non-blocking)
+- Camera permission error handling with retry and settings guidance
+- Stream interruption handling with automatic restart
+- Fallback to file picker when camera not supported
+
+### 🧩 Components
+- `CameraCapture` organism - integrates camera, GPS, and UI components
+- `CameraPreview` atom - video element with iOS Safari support (playsinline)
+- `CameraSwitchButton` atom - toggle between front/back cameras
+- `CameraPermissionError` atom - error display with retry/settings
+- Enhanced `GpsIndicator` atom - acquiring/available/unavailable states
+- Updated `CameraPlaceholder` atom - fallback mode for unsupported browsers
+
+### 🔧 Hooks & Utilities
+- `useCamera` hook - camera stream management, switching, cleanup
+- `processVideoFrame` utility - canvas capture, resize, compress
+- `isCameraSupported` helper - check getUserMedia availability
+- `stopAllTracks` helper - proper stream cleanup
+
+### 🧪 Tests
+- 1235 tests passing (up from 793)
+- 131 property-based tests with fast-check (100+ iterations each)
+- New property tests: stream cleanup, camera switch visibility, facingMode toggle, state preservation on switch, image resize, processed size, GPS metadata handling, GPS indicator status, state preservation on error
+
+### 📝 Integration
+- `ChecklistStepView` now uses real camera with file picker fallback
+- `GuidedCaptureSession` receives blob + metadata directly from camera
+- Removed `createPlaceholderBlob` function (no longer needed)
+
+---
+
 ## [0.3.0] - 2026-01-31 - v0.3 Guided Capture Flow Complete
 
 ### ✨ Features
@@ -41,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `savePhotoToIndexedDB` - offline photo persistence
 
 ### 🧪 Tests
-- 782 tests passing (up from 563)
+- 793 tests passing (up from 563)
 - 14 property-based tests with fast-check (100+ iterations each)
 - Property tests cover: checklist loading, step indicator, locale content, capture state transitions, GPS metadata, metadata display, skip button visibility, skip advances, completion summary, session resume, stage completion
 
@@ -250,18 +288,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [x] Job detail page with stage cards
 - [x] Stage locking (job_end requires job_start)
 
-### v0.3.0 - Guided Capture Flow (Week 4-5)
-- [ ] Create photo_checklists table with seed data
-- [ ] Step-by-step capture flow
-- [ ] Instructions and tips display
-- [ ] Preview with confirm/retake
-- [ ] Handle required vs optional items
+### v0.3.0 - Guided Capture Flow (Week 4-5) ✅
+- [x] Create photo_checklists table with seed data
+- [x] Step-by-step capture flow
+- [x] Instructions and tips display
+- [x] Preview with confirm/retake
+- [x] Handle required vs optional items
 
-### v0.4.0 - Camera + GPS (Week 6)
-- [ ] Real camera access
-- [ ] GPS capture
-- [ ] Photo compression
-- [ ] Offline camera support
+### v0.4.0 - Camera + GPS (Week 6) ✅
+- [x] Real camera access
+- [x] GPS capture
+- [x] Photo compression
+- [x] Fallback to file picker
 
 ### v0.5.0 - Offline Support (Week 7-8)
 - [ ] IndexedDB setup with Dexie.js
