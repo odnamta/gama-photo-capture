@@ -163,7 +163,11 @@ CREATE POLICY "Users view job photos"
   ON shipment_photos FOR SELECT
   USING (
     job_order_id IN (
-      SELECT id FROM job_orders WHERE assigned_to = auth.uid()
+      SELECT ra.job_order_id 
+      FROM resource_assignments ra
+      JOIN employees e ON e.id = ra.resource_id
+      WHERE e.user_id = auth.uid()
+      AND ra.job_order_id IS NOT NULL
     )
   );
 

@@ -13,6 +13,7 @@ interface AppLayoutProps {
   queueCount?: number
   isOnline?: boolean
   className?: string
+  headerAction?: React.ReactNode
 }
 
 export function AppLayout({
@@ -23,6 +24,7 @@ export function AppLayout({
   queueCount = 0,
   isOnline = true,
   className,
+  headerAction,
 }: AppLayoutProps) {
   const pathname = usePathname()
 
@@ -34,6 +36,7 @@ export function AppLayout({
         showQueue={showQueue}
         queueCount={queueCount}
         isOnline={isOnline}
+        headerAction={headerAction}
       />
       <main
         className={cn(

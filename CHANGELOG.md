@@ -30,6 +30,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-01-31 - Job Selection + Checklist Status
+
+### ✨ Features
+- Job list page showing user's assigned jobs via resource_assignments
+- Job card component with photo progress indicators per stage
+- Job detail page with stage cards (job_start, in_transit, job_end)
+- Stage progress tracking (required vs completed photos)
+- Stage locking: job_end locked until job_start is complete
+- Photo progress badge component (color-coded: red/yellow/green)
+- Stage card component with progress bar and capture button
+- Empty state component for lists with no data
+- Server actions for fetching jobs and job details
+
+### 🎨 UI/UX
+- Progress component from shadcn/ui
+- Header action slot for custom buttons
+- Refresh button on job list
+- Back navigation on job detail
+
+### 🧪 Tests
+- 131 tests passing (15 new job type tests)
+- Stage locking logic tests
+- Photo requirements validation tests
+
+### 📦 Dependencies
+- @radix-ui/react-progress for Progress component
+
+---
+
 ## [0.1.0] - 2026-01-31 - Foundation Complete ✅
 
 ### ✨ Features
@@ -150,12 +179,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [x] App shell with navigation
 - [x] Database tables documented (run migration manually)
 
-### v0.2.0 - Job Selection + Checklist Status (Week 3)
-- [ ] Fetch jobs assigned to current user
-- [ ] Job list UI showing today's jobs
-- [ ] Job card shows checklist progress
-- [ ] Job detail page with stage cards
-- [ ] Stage locking (job_end requires job_start)
+### v0.2.0 - Job Selection + Checklist Status (Week 3) ✅
+- [x] Fetch jobs assigned to current user
+- [x] Job list UI showing today's jobs
+- [x] Job card shows checklist progress
+- [x] Job detail page with stage cards
+- [x] Stage locking (job_end requires job_start)
 
 ### v0.3.0 - Guided Capture Flow (Week 4-5)
 - [ ] Create photo_checklists table with seed data

@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 priority: high
 dependencies: [v0.1-foundation]
 ---
@@ -16,35 +16,35 @@ Enable users to see their assigned jobs and the photo documentation status for e
 As a field staff member, I want to see my assigned jobs for today so I can start documenting them.
 
 **Acceptance Criteria:**
-- [ ] Fetch jobs from job_orders where assigned to current user
-- [ ] Filter to jobs with execution date = today (or recent)
-- [ ] Show job list sorted by priority/time
-- [ ] Each job card shows: JO number, customer, route, status
+- [x] Fetch jobs from job_orders where assigned to current user
+- [x] Filter to jobs with execution date = today (or recent)
+- [x] Show job list sorted by priority/time
+- [x] Each job card shows: JO number, customer, route, status
 
 ### US-2.2: See Photo Completion Status
 As a field staff member, I want to see how many photos I've taken per job so I know what's left to do.
 
 **Acceptance Criteria:**
-- [ ] Job card shows photo progress (e.g., "3/5 start | 0/4 end")
-- [ ] Visual indicator: red (not started), yellow (in progress), green (complete)
-- [ ] Separate counts for job_start and job_end stages
+- [x] Job card shows photo progress (e.g., "3/5 start | 0/4 end")
+- [x] Visual indicator: red (not started), yellow (in progress), green (complete)
+- [x] Separate counts for job_start and job_end stages
 
 ### US-2.3: View Job Detail
 As a field staff member, I want to see job details and available capture stages so I can start documenting.
 
 **Acceptance Criteria:**
-- [ ] Job detail page shows: customer, cargo, origin, destination
-- [ ] Stage cards for: job_start, in_transit (optional), job_end
-- [ ] Each stage card shows: required count, completed count, status
-- [ ] "Start Capture" button on each stage card
+- [x] Job detail page shows: customer, cargo, origin, destination
+- [x] Stage cards for: job_start, in_transit (optional), job_end
+- [x] Each stage card shows: required count, completed count, status
+- [x] "Start Capture" button on each stage card
 
 ### US-2.4: Stage Locking
 As a supervisor, I want job_end photos to require job_start completion so documentation is sequential.
 
 **Acceptance Criteria:**
-- [ ] job_end stage is locked until job_start is complete
-- [ ] Locked stage shows message: "Complete Job Start photos first"
-- [ ] in_transit stage is always available (optional photos)
+- [x] job_end stage is locked until job_start is complete
+- [x] Locked stage shows message: "Complete Job Start photos first"
+- [x] in_transit stage is always available (optional photos)
 
 ## UI Components Needed
 
@@ -100,8 +100,8 @@ const { data: counts } = await supabase
 
 ## Success Criteria
 
-- [ ] User sees only their assigned jobs
-- [ ] Photo progress is accurate and updates after capture
-- [ ] Stage locking works correctly
-- [ ] Page loads < 2 seconds
-- [ ] Works offline with cached data
+- [x] User sees only their assigned jobs
+- [x] Photo progress is accurate and updates after capture
+- [x] Stage locking works correctly
+- [x] Page loads < 2 seconds
+- [ ] Works offline with cached data (deferred to v0.5)

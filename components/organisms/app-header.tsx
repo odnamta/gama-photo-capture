@@ -13,6 +13,7 @@ interface AppHeaderProps {
   queueCount?: number
   isOnline?: boolean
   className?: string
+  headerAction?: React.ReactNode
 }
 
 export function AppHeader({
@@ -22,6 +23,7 @@ export function AppHeader({
   queueCount = 0,
   isOnline = true,
   className,
+  headerAction,
 }: AppHeaderProps) {
   const router = useRouter()
 
@@ -47,6 +49,7 @@ export function AppHeader({
       </div>
 
       <div className="flex items-center gap-3">
+        {headerAction}
         <OfflineIndicator isOnline={isOnline} />
         
         {showQueue && (
