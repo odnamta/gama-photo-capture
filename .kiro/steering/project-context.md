@@ -11,6 +11,22 @@ inclusion: always
 - **Primary Users**: Operations staff, Engineers, Drivers
 - **Parent System**: GAMA ERP (shares Supabase project)
 
+### App Model: Guided Photo Capture (Zipcar-Style)
+
+This app uses a **guided checklist approach**, not free-form photo capture:
+- Users follow step-by-step photo checklists per job stage
+- Required photos must be taken before proceeding
+- Each step shows instructions, tips, and example expectations
+- Photos automatically link to correct job and checklist item
+- Compliance-focused: ensures all required documentation captured
+
+**Job Stages:**
+| Stage | When | Required Photos | Optional |
+|-------|------|-----------------|----------|
+| `job_start` | Before loading | 4 | 1 (damage) |
+| `in_transit` | During transport | 0 | 2 |
+| `job_end` | After delivery | 3 | 1 (damage) |
+
 ## Tech Stack
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript (strict mode)
@@ -46,9 +62,9 @@ This satellite app shares:
 - **Same job_orders table** (photos link to jobs)
 
 New tables specific to Photo Capture:
+- `photo_checklists` - Defines required/optional photos per stage
 - `shipment_photos` - Photo metadata and storage references
 - `photo_upload_queue` - Offline sync tracking
-- `photo_tags` - Flexible categorization
 
 ## User Roles (from GAMA ERP)
 | Role | Access Level |
@@ -61,17 +77,33 @@ New tables specific to Photo Capture:
 
 ## Key Workflows
 
-### Photo Capture Flow
+### Guided Capture Flow
+
 ```
-1. User opens app → Auto-login (Supabase session)
-2. Select job order (or scan barcode)
-3. Choose photo type (before/after/damage/document/survey)
-4. Capture photo → Camera API
-5. Preview → Confirm or retake
-6. Save to queue → IndexedDB
-7. Upload in background → Supabase Storage
-8. Link metadata → shipment_photos table
+Select Job → Choose Stage → Step-by-Step Capture → Review → Done
+
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Job List   │───▶│ Job Detail  │───▶│   Guided    │───▶│  Complete   │
+│  (Today's)  │    │  (Stages)   │    │   Capture   │    │  (Synced)   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                          │                   │
+                          ▼                   ▼
+                   ┌───────────┐       ┌───────────────┐
+                   │ job_start │       │ Step 1 of 5   │
+                   │ in_transit│       │ Instructions  │
+                   │ job_end   │       │ [Capture]     │
+                   └───────────┘       │ Preview       │
+                                       │ Confirm/Next  │
+                                       └───────────────┘
 ```
+
+**Capture Step Flow:**
+1. Show checklist item (title, description, tips)
+2. User captures photo
+3. Preview with GPS/timestamp confirmation
+4. Optional: Add note (e.g., "existing scratch")
+5. Confirm → Auto-advance to next step
+6. Repeat until all required photos done
 
 ### Offline Sync Flow
 ```
@@ -87,42 +119,51 @@ New tables specific to Photo Capture:
 ## Photo Types
 | Type | Use Case |
 |------|----------|
-| `before` | Pre-shipment cargo condition |
-| `after` | Post-delivery confirmation |
-| `damage` | Any damage documentation |
+| `cargo_before` | Pre-loading cargo condition |
+| `cargo_after` | Post-delivery cargo condition |
+| `cargo_transit` | Cargo during transport |
 | `document` | Permits, receipts, paperwork |
-| `survey` | Site/route surveys (engineering) |
-| `other` | Miscellaneous |
+| `damage` | Any damage documentation |
+| `issue` | Problems during transport |
 
 ## Storage Structure
 ```
 Supabase Storage Bucket: shipment-photos
-Path: {user_id}/{year}/{month}/{job_order_id}/{photo_type}/{timestamp}_{uuid}.jpg
+Path: {user_id}/{year}/{month}/{job_order_id}/{stage}/{timestamp}_{uuid}.jpg
 
 Example:
-shipment-photos/abc123-user-id/2026/01/jo-uuid/before/1706745600_xyz789.jpg
+shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 ```
 
 ## Current State (January 2026)
-- **Status**: v0.1 Foundation Complete ✅
+- **Status**: v0.1 Foundation Complete ✅ | Pivoting to Guided Capture
 - **Phase**: Development
 - **Dependencies**: GAMA ERP v1.0 launch (March 12, 2026)
 - **Planned Start**: April 2026
 
 ## Active Sprint Tasks
-- [x] Project setup (Next.js 15, TypeScript, Tailwind)
-- [x] Supabase integration (reuse GAMA ERP config)
-- [x] Authentication with Google OAuth
-- [x] Role-based access control
-- [x] App shell (header, bottom nav, layout)
-- [x] All main routes with placeholders
-- [x] PWA manifest and service worker
-- [x] Database schema documentation
-- [ ] Create shipment_photos table with RLS (run migration in Supabase)
-- [ ] Camera capture component
-- [ ] Offline storage with Dexie.js
+
+### v0.2 Job Selection + Checklist Status
+- [ ] Fetch jobs assigned to current user from job_orders
+- [ ] Job list UI showing today's jobs
+- [ ] Job card shows checklist progress (e.g., "3/5 photos")
+- [ ] Job detail page with stage cards
+- [ ] Stage cards show: status, required count, completion
+- [ ] "Start Capture" button per stage
+- [ ] Lock job_end until job_start complete
+
+### v0.3 Guided Capture Flow
+- [ ] Create photo_checklists table with seed data
+- [ ] Load checklist items for selected stage
+- [ ] Step indicator (Step 1 of 5)
+- [ ] Instruction display with tips
+- [ ] Capture button (placeholder, actual camera in v0.4)
+- [ ] Preview screen with confirm/retake
+- [ ] Progress tracking per job
+- [ ] Handle required vs optional items
 
 ## Recent Changes
+- 2026-01-31: Pivot to guided capture model (Zipcar-style) - Updated steering files and specs
 - 2026-01-31: v0.1 Foundation Complete - Full app shell, auth, PWA foundation, 116 tests passing
 See `CHANGELOG.md` for detailed version history.
 
@@ -135,11 +176,15 @@ See `CHANGELOG.md` for detailed version history.
 - ❌ Skip offline support (critical for field use)
 - ❌ Upload full-resolution images (resize to max 2048px)
 - ❌ Hard delete photos (use soft delete)
+- ❌ Build free-form "take any photo" capture
+- ❌ Prioritize gallery/album view (later phase)
+- ❌ Skip required photos in checklist flow
+- ❌ Allow job_end capture before job_start complete
 
 ## Quick References
 - **GAMA ERP Repo**: https://github.com/odnamta/Gama-ERP
 - **Supabase Dashboard**: https://supabase.com/dashboard/project/ljbkjtaowrdddvjhsygj
-- **PRD Document**: `/docs/GAMA_PHOTO_CAPTURE_PRD.md`
+- **PRD Document**: `.kiro/steering/GAMA_PHOTO_CAPTURE_PRD.md`
 
 ---
 *Last Updated: January 2026*

@@ -128,6 +128,37 @@ interface CameraCaptureProps {
 }
 ```
 
+### Guided Capture Components
+
+```typescript
+// Checklist Step Component
+interface ChecklistStepProps {
+  item: PhotoChecklistItem
+  stepNumber: number
+  totalSteps: number
+  onCapture: () => void
+  onSkip?: () => void  // Only for optional items
+  isComplete: boolean
+}
+
+// Stage Card Component
+interface StageCardProps {
+  stage: 'job_start' | 'in_transit' | 'job_end'
+  requiredCount: number
+  completedCount: number
+  isLocked: boolean  // job_end locked until job_start complete
+  onStart: () => void
+}
+
+// Progress Indicator
+// Always show current step and total
+// Example: "Step 2 of 5" with progress bar
+<div className="flex items-center gap-2">
+  <span className="text-sm">Step {current} of {total}</span>
+  <Progress value={(current / total) * 100} />
+</div>
+```
+
 ### Context Pattern
 ```typescript
 // contexts/job-context.tsx
@@ -375,6 +406,12 @@ try {
 - Add proper loading and error states
 - Use Tailwind CSS (no inline styles)
 - Follow Atomic Design for component organization
+- Enforce required photos before allowing stage completion
+- Show clear instructions and tips for each photo
+- Lock job_end stage until job_start is complete
+- Support Indonesian language (title_id, description_id)
+- Show completion status on job cards (e.g., "3/5 photos")
+- Auto-advance to next step after confirming photo
 
 ### ❌ DON'T
 - Create duplicate components
@@ -386,6 +423,11 @@ try {
 - Ignore camera/location permission denials
 - Use localStorage for large data (use IndexedDB)
 - Create API routes without auth checks
+- Allow skipping required checklist items
+- Build gallery view in MVP (focus on capture flow)
+- Allow job_end photos before job_start is complete
+- Require photos for in_transit stage (all optional)
+- Block on GPS failure (capture anyway, note missing GPS)
 
 ---
 *Last Updated: January 2026*

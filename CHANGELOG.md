@@ -9,10 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 🎯 Planned
-- Camera capture component
-- Offline storage with Dexie.js
-- Full PWA configuration
+### ⚠️ Breaking Changes
+- Changed app model from free-form to guided capture (Zipcar-style)
+- Added `photo_checklists` table requirement
+- Updated `shipment_photos` schema with `checklist_item_id` and `stage`
+
+### ✨ Features (Planned)
+- Guided photo capture with step-by-step checklist
+- Job stage support: job_start, in_transit, job_end
+- Required vs optional photo handling
+- Stage completion tracking
+- Sequential stage locking (job_end requires job_start)
+
+### 📝 Documentation
+- Updated project-context.md with Zipcar model
+- Created database-schema.md with photo_checklists
+- Replaced v0.2 spec with job selection + checklist status
+- Created v0.3-guided-capture spec
+- Created v0.4-camera-gps spec
 
 ---
 
@@ -136,32 +150,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [x] App shell with navigation
 - [x] Database tables documented (run migration manually)
 
-### v0.2.0 - Job Selection (Week 3)
-- [ ] Jobs API endpoints
-- [ ] Job list page
-- [ ] Job selection context
-- [ ] Search/filter
+### v0.2.0 - Job Selection + Checklist Status (Week 3)
+- [ ] Fetch jobs assigned to current user
+- [ ] Job list UI showing today's jobs
+- [ ] Job card shows checklist progress
+- [ ] Job detail page with stage cards
+- [ ] Stage locking (job_end requires job_start)
 
-### v0.3.0 - Camera Capture (Week 4-5)
-- [ ] Camera access component
+### v0.3.0 - Guided Capture Flow (Week 4-5)
+- [ ] Create photo_checklists table with seed data
+- [ ] Step-by-step capture flow
+- [ ] Instructions and tips display
+- [ ] Preview with confirm/retake
+- [ ] Handle required vs optional items
+
+### v0.4.0 - Camera + GPS (Week 6)
+- [ ] Real camera access
 - [ ] GPS capture
-- [ ] Photo type selector
-- [ ] Preview and confirm flow
-
-### v0.4.0 - Gallery (Week 6)
-- [ ] Photo gallery page
-- [ ] Photo detail view
-- [ ] Delete functionality
+- [ ] Photo compression
+- [ ] Offline camera support
 
 ### v0.5.0 - Offline Support (Week 7-8)
-- [ ] IndexedDB setup
+- [ ] IndexedDB setup with Dexie.js
 - [ ] Offline photo capture
 - [ ] Background sync
 - [ ] Queue management UI
 
 ### v0.6.0 - PWA & Polish (Week 9-10)
-- [ ] PWA manifest
-- [ ] Service worker
+- [ ] Full PWA configuration
 - [ ] Install prompt
 - [ ] Settings page
 - [ ] Performance optimization
