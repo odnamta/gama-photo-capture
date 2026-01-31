@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-01-31 - v0.3 Guided Capture Flow Complete
+
+### ✨ Features
+- Guided photo capture with step-by-step checklist flow
+- Job stage support: job_start, in_transit, job_end
+- Required vs optional photo handling with skip functionality
+- Stage completion tracking with `checkStageCompletion` server action
+- Session resume from existing photos
+- Photo preview with GPS metadata and notes
+- Completion summary with captured/skipped photo grid
+- Exit confirmation dialog for unsaved captures
+- IndexedDB persistence for offline support (via Dexie.js)
+
+### 🧩 Components
+- `GuidedCaptureSession` organism - orchestrates capture flow
+- `ChecklistStepView` molecule - displays current checklist item
+- `PhotoPreviewSheet` molecule - photo preview with confirm/retake
+- `CaptureCompleteSummary` molecule - completion summary
+- `StepProgressBar` atom - step indicator
+- `StepInstructions` atom - localized instructions
+- `CameraPlaceholder` atom - placeholder for v0.4 camera
+- `CaptureButton` atom - large capture button
+- `MetadataDisplay` atom - GPS/timestamp display
+- `PhotoThumbnailGrid` atom - photo grid with status badges
+
+### 🔧 Hooks & Actions
+- `useCaptureSession` hook - session state management
+- `useGeolocation` hook - GPS capture
+- `loadChecklist` server action - load checklist items
+- `loadExistingPhotos` server action - load existing photos for resume
+- `checkStageCompletion` server action - check stage completion status
+- `savePhotoToIndexedDB` - offline photo persistence
+
+### 🧪 Tests
+- 782 tests passing (up from 563)
+- 14 property-based tests with fast-check (100+ iterations each)
+- Property tests cover: checklist loading, step indicator, locale content, capture state transitions, GPS metadata, metadata display, skip button visibility, skip advances, completion summary, session resume, stage completion
+
+### 📝 Documentation
+- Updated camera page with guided capture flow
+- Added JSDoc comments to all new components and hooks
+
+---
+
 ## [Unreleased]
 
 ### ⚠️ Breaking Changes
@@ -15,11 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `shipment_photos` schema with `checklist_item_id` and `stage`
 
 ### ✨ Features (Planned)
-- Guided photo capture with step-by-step checklist
-- Job stage support: job_start, in_transit, job_end
-- Required vs optional photo handling
-- Stage completion tracking
-- Sequential stage locking (job_end requires job_start)
+- Real camera integration (v0.4)
+- Photo upload to Supabase Storage (v0.5)
+- Offline sync with background upload (v0.5)
 
 ### 📝 Documentation
 - Updated project-context.md with Zipcar model
@@ -27,6 +69,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced v0.2 spec with job selection + checklist status
 - Created v0.3-guided-capture spec
 - Created v0.4-camera-gps spec
+
+---
+
+## [0.3.0-spec] - 2026-01-31 - v0.3 Guided Capture Spec Complete
+
+### 📝 Documentation
+- Completed v0.3 Guided Capture spec with design.md and tasks.md
+- Design includes state machine, component hierarchy, 13 correctness properties
+- Tasks include 12 implementation tasks with property-based testing
+- Ready for implementation phase
 
 ---
 
