@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Update Project Context",
+  "description": "Updates CHANGELOG.md and project-context.md after completing significant work like new features, fixes, or refactors",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the work just completed. If significant changes were made (new features, bug fixes, refactors, dependency updates), update the documentation:\n\n1. Add entry to CHANGELOG.md with version, date, and categorized changes (✨ Features, 🐛 Bug Fixes, 🔧 Improvements, 📦 Dependencies)\n2. Update 'Recent Changes' section in .kiro/steering/project-context.md with a brief one-liner\n3. Mark completed items in 'Active Sprint Tasks' section if applicable\n\nIf only minor changes or no code changes were made, skip this update."
+  }
+}
