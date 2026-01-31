@@ -412,6 +412,8 @@ try {
 - Support Indonesian language (title_id, description_id)
 - Show completion status on job cards (e.g., "3/5 photos")
 - Auto-advance to next step after confirming photo
+- Use manual types from `types/database.ts`
+- Check user role before showing content
 
 ### ❌ DON'T
 - Create duplicate components
@@ -428,6 +430,8 @@ try {
 - Allow job_end photos before job_start is complete
 - Require photos for in_transit stage (all optional)
 - Block on GPS failure (capture anyway, note missing GPS)
+- Run `npx supabase gen types` (use manual types instead)
+- Query GAMA ERP tables not in our types file
 
 ---
 *Last Updated: January 2026*

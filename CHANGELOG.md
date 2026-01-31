@@ -30,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2026-01-31 - Database Types
+
+### 🔧 Improvements
+- Created manual `types/database.ts` with typed Supabase tables (avoids 300+ table context bloat from shared GAMA ERP)
+- Updated Supabase clients to use `Database` type for type-safe queries
+- Fixed nullable field types in `JobWithProgress` and `UserProfile` to match database schema
+
+### 🧪 Tests
+- 131 tests passing (no regressions)
+
+---
+
 ## [0.2.0] - 2026-01-31 - Job Selection + Checklist Status
 
 ### ✨ Features

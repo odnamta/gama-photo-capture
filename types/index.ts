@@ -36,8 +36,8 @@ export const ALLOWED_ROLES: AllowedRole[] = [
  */
 export interface UserProfile {
   user_id: string;
-  full_name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   role: AllowedRole;
   avatar_url?: string;
 }

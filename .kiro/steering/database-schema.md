@@ -3,6 +3,24 @@ inclusion: always
 ---
 # GAMA Photo Capture - Database Schema
 
+## ⚠️ SATELLITE APP DATABASE RULES
+
+This app shares Supabase with GAMA ERP (300+ tables).
+
+**CRITICAL RULES:**
+- DO NOT run `npx supabase gen types` (will bloat context)
+- DO NOT query tables not listed in this document
+- Types are manually defined in `types/database.ts`
+
+**TABLE ACCESS:**
+| Level | Tables | Access |
+|-------|--------|--------|
+| PRIMARY | photo_checklists, shipment_photos, photo_upload_queue | Full CRUD |
+| SECONDARY | job_orders, user_profiles, customers, employees | Read-only |
+| FORBIDDEN | All other GAMA ERP tables | Do not access |
+
+---
+
 ## Overview
 
 This document defines the database schema for the Photo Capture app. Tables are created in the shared GAMA ERP Supabase project.

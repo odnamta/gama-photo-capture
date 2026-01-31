@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { Database } from '@/types/database'
 
 /**
  * Validates that required Supabase environment variables are present.
@@ -61,7 +62,7 @@ export async function createClient() {
   const { url, anonKey } = validateEnvironmentVariables()
   const cookieStore = await cookies()
 
-  return createServerClient(url, anonKey, {
+  return createServerClient<Database>(url, anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()

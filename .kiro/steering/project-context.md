@@ -37,6 +37,19 @@ This app uses a **guided checklist approach**, not free-form photo capture:
 - **PWA**: next-pwa
 - **Deployment**: Vercel
 
+## Deployment
+
+**Separate from GAMA ERP:**
+- Repo: gama-photo-capture
+- URL: foto.gama.co.id (production)
+- Port: 3001 (development)
+- Vercel: Separate project
+
+**Shared with GAMA ERP:**
+- Supabase: ljbkjtaowrdddvjhsygj
+- Auth: Same Google OAuth
+- Tables: job_orders, user_profiles, customers
+
 ## Key Commands
 ```bash
 # Development
@@ -163,6 +176,7 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 - [ ] Handle required vs optional items
 
 ## Recent Changes
+- 2026-01-31: v0.2.1 Database Types - Manual types/database.ts for type-safe Supabase queries
 - 2026-01-31: v0.2 Job Selection Complete - Job list, job detail, stage cards, stage locking, 131 tests
 - 2026-01-31: Database migration applied - photo_checklists, shipment_photos, photo_upload_queue tables
 - 2026-01-31: Pivot to guided capture model (Zipcar-style) - Updated steering files and specs

@@ -78,7 +78,7 @@ export interface PhotoChecklistItem {
 export interface JobOrder {
   id: string
   jo_number: string
-  description: string
+  description: string | null
   status: string
   customer_id: string
   project_id: string | null
@@ -96,7 +96,7 @@ export interface JobOrder {
 export interface JobWithProgress {
   id: string
   joNumber: string
-  description: string
+  description: string | null
   status: string
   customerName: string
   // Assignment info

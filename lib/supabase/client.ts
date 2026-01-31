@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { Database } from '@/types/database'
 
 /**
  * Checks if we're in a browser environment
@@ -71,5 +72,5 @@ function validateEnvironmentVariables(): { url: string; anonKey: string } {
 export function createClient() {
   const { url, anonKey } = validateEnvironmentVariables()
 
-  return createBrowserClient(url, anonKey)
+  return createBrowserClient<Database>(url, anonKey)
 }
