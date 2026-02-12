@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2] - 2026-01-31 - Fix Jobs Page Schema Mismatch
+
+### 🐛 Bug Fixes
+- Fixed Jobs page to work with actual GAMA ERP `job_orders` schema
+- Removed employee lookup and assignment filtering (columns don't exist in ERP)
+- Updated queries to use actual columns: `description`, `workflow_status`, `created_at`
+
+### 🔧 Improvements
+- Simplified `getMyJobs()` - fetches all recent job orders directly
+- Updated `getJobDetail()` to use correct column names
+- Updated `types/database.ts` to match actual schema (removed non-existent columns)
+- Removed unused `employees` and `resource_assignments` table types
+- Changed empty state message to "No Jobs Yet" (not assignment-related)
+
+---
+
+## [0.5.1] - 2026-01-31 - Fix Jobs Page Employee Lookup
+
+### 🐛 Bug Fixes
+- Fixed "Employee record not found" error on Jobs page when user has no linked employee record
+- Jobs page now gracefully handles missing employee-user linkage
+- Added fallback to show recent job orders (last 30 days) for development/testing
+
+### 🔧 Improvements
+- Multiple job lookup methods: resource_assignments → pic_id/driver_id → recent jobs fallback
+- Updated `types/database.ts` to match actual GAMA ERP job_orders schema
+- Uses `cargo_description` field instead of non-existent `description` column
+- Builds job description from `origin → destination` when cargo_description is empty
+- Handles null values gracefully throughout job fetching logic
+
+---
+
 ## [0.5.0] - 2026-01-31 - v0.5 Photo Upload + Offline Sync Complete
 
 ### ✨ Features

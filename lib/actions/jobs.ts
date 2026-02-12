@@ -1,11 +1,13 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import type { JobWithProgress, StageProgress, PhotoChecklistItem } from '@/types/job'
+import type { JobWithProgress, PhotoChecklistItem } from '@/types/job'
 
 /**
- * Fetch jobs assigned to the current user
- * Jobs are linked via: resource_assignments.resource_id → employees.id → employees.user_id
+ * Fetch jobs for the current user
+ * 
+ * Note: GAMA ERP doesn't have job assignment columns yet.
+ * This fetches all recent job orders for now.
  */
 export async function getMyJobs(): Promise<{ 
   jobs: JobWithProgress[]
@@ -19,43 +21,7 @@ export async function getMyJobs(): Promise<{
     return { jobs: [], error: 'Not authenticated' }
   }
 
-  // Get employee record for current user
-  const { data: employee, error: empError } = await supabase
-    .from('employees')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (empError || !employee) {
-    return { jobs: [], error: 'Employee record not found' }
-  }
-
-  // Get job assignments for this employee
-  const { data: assignments, error: assignError } = await supabase
-    .from('resource_assignments')
-    .select(`
-      id,
-      job_order_id,
-      start_date,
-      end_date,
-      status
-    `)
-    .eq('resource_id', employee.id)
-    .not('job_order_id', 'is', null)
-    .order('start_date', { ascending: false })
-
-  if (assignError) {
-    return { jobs: [], error: assignError.message }
-  }
-
-  if (!assignments || assignments.length === 0) {
-    return { jobs: [], error: null }
-  }
-
-  // Get unique job IDs
-  const jobIds = [...new Set(assignments.map(a => a.job_order_id).filter(Boolean))] as string[]
-
-  // Fetch job orders with customer info
+  // Fetch recent job orders (no assignment filter - GAMA ERP doesn't have assignment columns)
   const { data: jobOrders, error: jobError } = await supabase
     .from('job_orders')
     .select(`
@@ -63,13 +29,22 @@ export async function getMyJobs(): Promise<{
       jo_number,
       description,
       status,
+      workflow_status,
+      created_at,
       customer:customers(id, name)
     `)
-    .in('id', jobIds)
+    .order('created_at', { ascending: false })
+    .limit(50)
 
   if (jobError) {
     return { jobs: [], error: jobError.message }
   }
+
+  if (!jobOrders || jobOrders.length === 0) {
+    return { jobs: [], error: null }
+  }
+
+  const jobIds = jobOrders.map(j => j.id)
 
   // Fetch photo counts per job
   const { data: photos, error: photoError } = await supabase
@@ -107,7 +82,6 @@ export async function getMyJobs(): Promise<{
 
   // Build jobs with progress
   const jobs: JobWithProgress[] = (jobOrders || []).map(job => {
-    const assignment = assignments.find(a => a.job_order_id === job.id)
     const jobPhotos = photos?.filter(p => p.job_order_id === job.id) || []
 
     // Count completed photos per stage
@@ -149,11 +123,11 @@ export async function getMyJobs(): Promise<{
 
     return {
       id: job.id,
-      joNumber: job.jo_number,
-      description: job.description,
-      status: job.status,
+      joNumber: job.jo_number || 'No JO Number',
+      description: job.description || 'No description',
+      status: job.status || job.workflow_status || 'unknown',
       customerName: customer?.name || 'Unknown Customer',
-      assignmentDate: assignment?.start_date || '',
+      assignmentDate: job.created_at || '',
       progress,
     }
   })
@@ -185,6 +159,8 @@ export async function getJobDetail(jobId: string): Promise<{
       jo_number,
       description,
       status,
+      workflow_status,
+      created_at,
       customer:customers(id, name)
     `)
     .eq('id', jobId)
@@ -267,11 +243,11 @@ export async function getJobDetail(jobId: string): Promise<{
 
   const job: JobWithProgress = {
     id: jobOrder.id,
-    joNumber: jobOrder.jo_number,
-    description: jobOrder.description,
-    status: jobOrder.status,
+    joNumber: jobOrder.jo_number || 'No JO Number',
+    description: jobOrder.description || 'No description',
+    status: jobOrder.status || jobOrder.workflow_status || 'unknown',
     customerName: customer?.name || 'Unknown Customer',
-    assignmentDate: '',
+    assignmentDate: jobOrder.created_at || '',
     progress,
   }
 

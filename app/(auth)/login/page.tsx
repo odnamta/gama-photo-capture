@@ -84,15 +84,22 @@ function LoginForm() {
       
       // Build the callback URL for OAuth
       // This URL will be called after Google authentication
+      // IMPORTANT: For shared Supabase projects, we must explicitly set the redirect URL
+      // to ensure the OAuth flow returns to THIS app, not the main ERP
+      // The redirectTo URL MUST be in the Supabase Dashboard's Redirect URLs list
       const callbackUrl = new URL('/auth/callback', window.location.origin)
       callbackUrl.searchParams.set('redirectTo', redirectTo)
 
-      const { error: authError } = await supabase.auth.signInWithOAuth({
+      console.log('OAuth redirectTo URL:', callbackUrl.toString())
+
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: callbackUrl.toString(),
         },
       })
+
+      console.log('OAuth response:', { url: data?.url, error: authError })
 
       if (authError) {
         throw authError

@@ -213,45 +213,21 @@ export interface Database {
       job_orders: {
         Row: {
           id: string
-          jo_number: string
+          jo_number: string | null
+          pjo_id: string | null
           customer_id: string | null
           project_id: string | null
           description: string | null
-          status: string
-          execution_date: string | null
-          origin: string | null
-          destination: string | null
-          assigned_to: string | null
-          cargo_description: string | null
-          created_at: string
+          amount: number | null
+          status: string | null
+          workflow_status: string | null
+          final_revenue: number | null
+          final_cost: number | null
+          created_at: string | null
+          updated_at: string | null
         }
-        Insert: {
-          id?: string
-          jo_number: string
-          customer_id?: string | null
-          project_id?: string | null
-          description?: string | null
-          status: string
-          execution_date?: string | null
-          origin?: string | null
-          destination?: string | null
-          assigned_to?: string | null
-          cargo_description?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          jo_number?: string
-          customer_id?: string | null
-          project_id?: string | null
-          description?: string | null
-          status?: string
-          execution_date?: string | null
-          origin?: string | null
-          destination?: string | null
-          assigned_to?: string | null
-          cargo_description?: string | null
-        }
+        Insert: never // Read-only from ERP
+        Update: never // Read-only from ERP
         Relationships: [
           {
             foreignKeyName: "job_orders_customer_id_fkey"
@@ -309,74 +285,6 @@ export interface Database {
         }
         Relationships: []
       }
-
-      employees: {
-        Row: {
-          id: string
-          user_id: string | null
-          full_name: string
-          employee_code: string | null
-          position: string | null
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          full_name: string
-          employee_code?: string | null
-          position?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          full_name?: string
-          employee_code?: string | null
-          position?: string | null
-        }
-        Relationships: []
-      }
-
-      resource_assignments: {
-        Row: {
-          id: string
-          job_order_id: string | null
-          resource_id: string | null
-          start_date: string | null
-          end_date: string | null
-          status: string | null
-        }
-        Insert: {
-          id?: string
-          job_order_id?: string | null
-          resource_id?: string | null
-          start_date?: string | null
-          end_date?: string | null
-          status?: string | null
-        }
-        Update: {
-          id?: string
-          job_order_id?: string | null
-          resource_id?: string | null
-          start_date?: string | null
-          end_date?: string | null
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "resource_assignments_job_order_id_fkey"
-            columns: ["job_order_id"]
-            isOneToOne: false
-            referencedRelation: "job_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "resource_assignments_resource_id_fkey"
-            columns: ["resource_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -408,7 +316,6 @@ export type PhotoUploadQueueItem = Database['public']['Tables']['photo_upload_qu
 export type JobOrder = Database['public']['Tables']['job_orders']['Row']
 export type UserProfile = Database['public']['Tables']['user_profiles']['Row']
 export type Customer = Database['public']['Tables']['customers']['Row']
-export type Employee = Database['public']['Tables']['employees']['Row']
 
 // ========================================
 // ENUM TYPES

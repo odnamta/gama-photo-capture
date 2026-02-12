@@ -74,8 +74,8 @@ export default function JobsPage() {
         {!isLoading && !error && jobs.length === 0 && (
           <EmptyState
             icon={<Briefcase className="h-10 w-10 text-muted-foreground" />}
-            title="No Jobs Assigned"
-            description="You don't have any jobs assigned yet. Jobs will appear here when assigned to you."
+            title="No Jobs Yet"
+            description="Jobs will appear here once created in GAMA ERP."
             action={
               <Button onClick={loadJobs} variant="outline">
                 Refresh
@@ -88,7 +88,7 @@ export default function JobsPage() {
         {!isLoading && !error && jobs.length > 0 && (
           <>
             <p className="text-sm text-muted-foreground">
-              {jobs.length} job{jobs.length !== 1 ? 's' : ''} assigned
+              {jobs.length} job{jobs.length !== 1 ? 's' : ''} available
             </p>
             {jobs.map(job => (
               <JobCard

@@ -193,6 +193,8 @@ shipment-photos/abc123-user-id/2026/01/jo-uuid/job_start/1706745600_xyz789.jpg
 - [x] Retry failed uploads
 
 ## Recent Changes
+- 2026-01-31: v0.5.2 Fix Jobs Page Schema - Removed assignment requirement, updated to actual GAMA ERP job_orders schema
+- 2026-01-31: v0.5.1 Fix Jobs Page - Fixed "Employee record not found" error, added fallback job lookup, updated types to match GAMA ERP schema
 - 2026-01-31: v0.5 Photo Upload + Offline Sync Complete - Full queue UI, sync manager, 1440 tests, 77 property tests
 - 2026-01-31: v0.5 Implementation Progress - Upload service, storage path, useOnlineStatus hook, 1422 tests, 64 upload-sync property tests
 - 2026-01-31: v0.5 Spec Complete - requirements.md, design.md, tasks.md with 16 correctness properties, 13 implementation tasks
