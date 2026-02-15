@@ -9,7 +9,7 @@
 - **Status**: v0.5 complete (photo upload + offline sync)
 
 ## Tech Stack
-- Next.js 15 (App Router) + TypeScript (strict)
+- Next.js 16 (App Router) + TypeScript (strict)
 - Supabase (shared with GIS-ERP: `ljbkjtaowrdddvjhsygj`)
 - TailwindCSS + shadcn/ui + Dexie.js (IndexedDB) + next-pwa
 - Dev port: 3001 | Production: foto.gama.co.id
