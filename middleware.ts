@@ -14,18 +14,13 @@ import { updateSession } from '@/lib/supabase/middleware'
  * Public routes: /login
  */
 export async function middleware(request: NextRequest) {
-  const response = await updateSession(request)
+  // Generate nonce for CSP (no unsafe-inline/unsafe-eval)
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
 
-  // Security headers
-  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), interest-cohort=()')
-  response.headers.set('Content-Security-Policy', [
+  const cspHeader = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
@@ -33,7 +28,22 @@ export async function middleware(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "upgrade-insecure-requests",
-  ].join('; '))
+  ].join('; ')
+
+  // Pass nonce to Next.js via request headers
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', cspHeader)
+
+  const response = await updateSession(request, requestHeaders)
+
+  // Security headers
+  response.headers.set('Content-Security-Policy', cspHeader)
+  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), interest-cohort=()')
 
   return response
 }
