@@ -12,7 +12,10 @@
 - Next.js 16 (App Router) + TypeScript (strict)
 - Supabase (shared with GIS-ERP: `ljbkjtaowrdddvjhsygj`)
 - TailwindCSS + shadcn/ui + Dexie.js (IndexedDB) + next-pwa
-- Dev port: 3001 | Production: foto.gama.co.id
+- Dev port: 3001 | Production: `https://photo.atmando.app`
+- **Deployment**: Docker Compose on Office Mini (Arya), port 3302 → 3000
+- **Deploy workflow**: Push to main → auto-deploy via cron (2min) → `docker compose build && up -d`
+- **Config**: `output: 'standalone'` in next.config.ts, Dockerfile + docker-compose.yml in repo root
 
 ## Key Commands
 ```bash
