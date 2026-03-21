@@ -13,7 +13,7 @@ import { updateSession } from '@/lib/supabase/middleware'
  * Protected routes: /camera, /jobs, /gallery, /queue, /settings
  * Public routes: /login
  */
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   // Generate nonce for CSP (no unsafe-inline/unsafe-eval)
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
 
