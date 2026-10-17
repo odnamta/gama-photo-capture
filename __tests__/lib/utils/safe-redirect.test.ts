@@ -23,10 +23,22 @@ describe('safeRedirectPath', () => {
     '/\\evil.example',
     '/\t/evil.example',
     '/\n/evil.example',
+    '/.//evil.example',
+    '/..//evil.example',
+    '/a/..//evil.example',
+    '/%2e//evil.example',
+    '/%2E%2E//evil.example',
+    '/./\\evil.example',
+    '/.\\/evil.example',
     'javascript:alert(1)',
     'camera',
   ])('rejects off-origin or non-path value %j', (value) => {
     expect(safeRedirectPath(value)).toBe(DEFAULT_REDIRECT_PATH)
+  })
+
+  it('keeps normal paths that contain dot-segments', () => {
+    expect(safeRedirectPath('/jobs/./123')).toBe('/jobs/123')
+    expect(safeRedirectPath('/jobs/../camera')).toBe('/camera')
   })
 
   it('uses the given fallback', () => {
