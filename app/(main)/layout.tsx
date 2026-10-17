@@ -16,9 +16,10 @@ export default async function MainLayout({
     redirect('/login')
   }
 
-  const hasAccess = await checkUserRole(user.id)
+  // checkUserRole returns a result object (always truthy); gate on .allowed
+  const roleCheck = await checkUserRole(user.id)
   
-  if (!hasAccess) {
+  if (!roleCheck.allowed) {
     redirect('/access-denied')
   }
 

@@ -19,18 +19,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 describe('useOnlineStatus Module Exports', () => {
   it('should export useOnlineStatus function', async () => {
-    const module = await import('@/hooks/use-online-status')
-    expect(typeof module.useOnlineStatus).toBe('function')
+    const mod = await import('@/hooks/use-online-status')
+    expect(typeof mod.useOnlineStatus).toBe('function')
   })
 
   it('should export useOnlineStatusLegacy function', async () => {
-    const module = await import('@/hooks/use-online-status')
-    expect(typeof module.useOnlineStatusLegacy).toBe('function')
+    const mod = await import('@/hooks/use-online-status')
+    expect(typeof mod.useOnlineStatusLegacy).toBe('function')
   })
 
   it('should export default as useOnlineStatus', async () => {
-    const module = await import('@/hooks/use-online-status')
-    expect(module.default).toBe(module.useOnlineStatus)
+    const mod = await import('@/hooks/use-online-status')
+    expect(mod.default).toBe(mod.useOnlineStatus)
   })
 })
 
@@ -40,10 +40,10 @@ describe('useOnlineStatus Module Exports', () => {
 
 describe('UseOnlineStatusReturn Interface', () => {
   it('should have correct type structure', async () => {
-    const module = await import('@/hooks/use-online-status')
+    const mod = await import('@/hooks/use-online-status')
     
     // Type check - if types are wrong, TypeScript will error at compile time
-    type HookReturn = ReturnType<typeof module.useOnlineStatus>
+    type HookReturn = ReturnType<typeof mod.useOnlineStatus>
     
     // Verify the expected shape
     const mockReturn: HookReturn = {

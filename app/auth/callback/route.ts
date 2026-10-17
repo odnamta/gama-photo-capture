@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { safeRedirectPath } from '@/lib/utils/safe-redirect'
 
 /**
  * OAuth callback route handler
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   
   // Get the redirect destination (preserved from the original request)
-  const redirectTo = searchParams.get('redirectTo') || '/camera'
+  const redirectTo = searchParams.get('redirectTo')
   
   // Get any error from the OAuth provider
   const error = searchParams.get('error')
@@ -53,8 +54,8 @@ export async function GET(request: Request) {
     }
 
     // Successfully authenticated - redirect to the intended destination
-    // Ensure the redirect path is safe (starts with /)
-    const safePath = redirectTo.startsWith('/') ? redirectTo : '/camera'
+    // Same-origin paths only: a bare startsWith('/') check let //evil.com and /\evil.com through
+    const safePath = safeRedirectPath(redirectTo)
     return NextResponse.redirect(new URL(safePath, origin))
   }
 

@@ -251,7 +251,7 @@ describe('calculateResizedDimensions', () => {
 
 describe('Photo Processor Type Exports', () => {
   it('should export ProcessOptions interface', async () => {
-    const module = await import('@/lib/utils/photo-processor')
+    await import('@/lib/utils/photo-processor')
     // Type check - if this compiles, the type is exported
     const options: import('@/lib/utils/photo-processor').ProcessOptions = {
       maxDimension: 2048,
@@ -262,7 +262,7 @@ describe('Photo Processor Type Exports', () => {
   })
 
   it('should export ProcessResult interface', async () => {
-    const module = await import('@/lib/utils/photo-processor')
+    await import('@/lib/utils/photo-processor')
     // Type check - if this compiles, the type is exported
     const result: import('@/lib/utils/photo-processor').ProcessResult = {
       blob: new Blob(),

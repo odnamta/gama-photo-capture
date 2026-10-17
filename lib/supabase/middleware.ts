@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { safeRedirectPath } from '@/lib/utils/safe-redirect'
 
 /**
  * Updates the Supabase session for middleware requests.
@@ -76,16 +77,17 @@ export async function updateSession(request: NextRequest, requestHeaders?: Heade
 
   // If user is not authenticated and trying to access a protected route
   if (!user && isProtectedRoute) {
-    // Preserve the original URL for redirect after login
+    // Preserve the original URL (path + query, e.g. /camera?job=..&stage=..) for redirect after login
     const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
+    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname + request.nextUrl.search)
     
     return NextResponse.redirect(redirectUrl)
   }
 
   // If user is authenticated and trying to access login page, redirect to camera
   if (user && isPublicRoute) {
-    const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/camera'
+    // Same-origin paths only (redirectTo is user-controlled: no open redirect)
+    const redirectTo = safeRedirectPath(request.nextUrl.searchParams.get('redirectTo'))
     return NextResponse.redirect(new URL(redirectTo, request.url))
   }
 

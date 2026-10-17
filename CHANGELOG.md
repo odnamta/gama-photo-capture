@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 - Guided capture: the main capture button read `cameraRef.current?.isReady()` during render, so it stayed disabled after the camera became active (the parent never re-rendered). `CameraCapture` now reports readiness through `onReadyChange` and `ChecklistStepView` keeps it in state
 - Camera permission error icon now comes from a static map (same icons), clearing the new `react-hooks/static-components` error
+- Role gate: `app/(main)/layout.tsx` tested `!hasAccess` on the `checkUserRole` result object, which is always truthy, so any signed-in user of the shared Supabase project got in regardless of role. It now gates on `.allowed` and sends other roles to `/access-denied`
+- Open redirect: a signed-in user opening `/login?redirectTo=https://other.site` was redirected off-site, and the OAuth callback accepted `//other.site` and `/\other.site`. Both now go through `safeRedirectPath` (same-origin paths only, fallback `/camera`)
+- The login redirect now keeps the query string, so `/camera?job=..&stage=..` survives sign-in instead of landing on the idle camera page
+- Tests: `module` variables renamed (`@next/next/no-assign-module-variable`); new tests for the redirect helper, middleware redirects and the role gate
 
 ---
 
