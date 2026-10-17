@@ -136,6 +136,7 @@ export function useOnlineStatusLegacy(): UseOnlineStatusReturn {
     const handleOffline = () => setIsOnline(false)
     
     // Sync initial state in case it changed between render and effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- re-sync with navigator.onLine after mount (legacy fallback hook)
     setIsOnline(getOnlineStatus())
     
     window.addEventListener('online', handleOnline)

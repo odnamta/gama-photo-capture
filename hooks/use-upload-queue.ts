@@ -195,6 +195,7 @@ export function useUploadQueue(): UseUploadQueueReturn {
   
   // Load photos on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loads the queue from IndexedDB (external store) on mount
     loadPhotos()
   }, [loadPhotos])
   

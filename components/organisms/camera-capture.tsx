@@ -25,6 +25,8 @@ export interface CameraCaptureProps {
   onError?: (error: CameraError) => void
   /** Whether capture is currently disabled */
   disabled?: boolean
+  /** Called whenever capture readiness (camera active and not disabled) changes */
+  onReadyChange?: (ready: boolean) => void
   /** Additional CSS classes */
   className?: string
 }
@@ -122,6 +124,7 @@ export const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>
       onCapture,
       onError,
       disabled = false,
+      onReadyChange,
       className
     },
     ref
@@ -270,9 +273,16 @@ export const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>
     /**
      * Check if camera is ready for capture
      */
-    const isReady = useCallback(() => {
-      return cameraState === 'active' && !disabled
-    }, [cameraState, disabled])
+    const ready = cameraState === 'active' && !disabled
+    const isReady = useCallback(() => ready, [ready])
+
+    /**
+     * Notify parent when readiness changes, so it can re-render controls
+     * (a ref read during the parent's render never updates on its own)
+     */
+    useEffect(() => {
+      onReadyChange?.(ready)
+    }, [ready, onReadyChange])
 
     // ============================================
     // IMPERATIVE HANDLE

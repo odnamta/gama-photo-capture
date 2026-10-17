@@ -43,10 +43,10 @@ describe('UseOnlineStatusReturn Interface', () => {
     const module = await import('@/hooks/use-online-status')
     
     // Type check - if types are wrong, TypeScript will error at compile time
-    type ReturnType = ReturnType<typeof module.useOnlineStatus>
+    type HookReturn = ReturnType<typeof module.useOnlineStatus>
     
     // Verify the expected shape
-    const mockReturn: ReturnType = {
+    const mockReturn: HookReturn = {
       isOnline: true,
       isOffline: false,
     }

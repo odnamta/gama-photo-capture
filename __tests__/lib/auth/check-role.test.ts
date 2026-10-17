@@ -83,7 +83,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { checkUserRole } = await import('@/lib/auth/check-role')
       const result = await checkUserRole('non-existent-user-id')
@@ -116,7 +116,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { checkUserRole } = await import('@/lib/auth/check-role')
       const result = await checkUserRole('test-user-id')
@@ -150,7 +150,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { checkUserRole } = await import('@/lib/auth/check-role')
       const result = await checkUserRole('test-user-id')
@@ -183,7 +183,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { checkUserRole } = await import('@/lib/auth/check-role')
       const result = await checkUserRole('test-user-id')
@@ -224,7 +224,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { getUserProfile } = await import('@/lib/auth/check-role')
       const profile = await getUserProfile('non-existent-user-id')
@@ -255,7 +255,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { getUserProfile } = await import('@/lib/auth/check-role')
       const profile = await getUserProfile('test-user-id')
@@ -291,7 +291,7 @@ describe('Role Verification', () => {
             }),
           }),
         }),
-      } as unknown as ReturnType<typeof createClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { getUserProfile } = await import('@/lib/auth/check-role')
       const profile = await getUserProfile('test-user-id')

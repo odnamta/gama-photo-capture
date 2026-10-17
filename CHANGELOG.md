@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.3] - 2026-10-17 - Next.js Security Upgrade
+
+### Security
+- Next.js 16.2.1 -> 16.4.2. 16.2.1 was inside critical unauthenticated RCE advisories: Image Optimization API with AVIF (GHSA-2xp9-vwfh-vxw4) and SVG (GHSA-2464-fhr4-w9xw), `'use cache'` typed arrays (GHSA-673q-mjm6-r5xr), `next/og` (GHSA-vcvr-r3jv-pc5j), plus SSRF, cache poisoning and DoS advisories
+- `npm audit fix` for transitive production fixes (sharp 0.35.5, postcss 8.5.23, ws 8.22.0, source-map-js 1.2.2, baseline-browser-mapping, nanoid). `npm audit --omit=dev`: 0 vulnerabilities (was 7: 1 critical, 5 high, 1 moderate)
+
+### Build and tooling
+- eslint-config-next 15.3.4 -> 16.4.2; `eslint.config.mjs` moved to the native flat config (the FlatCompat setup no longer loads with the 16.x config); `@eslint/eslintrc` dropped
+- `lint` script is now `eslint` (`next lint` was removed in Next.js 16)
+- Test-only type fixes: `next build` 16.4 type-checks the test files too, and 16 pre-existing type errors in `__tests__` failed the build
+
+### Bug Fixes
+- Guided capture: the main capture button read `cameraRef.current?.isReady()` during render, so it stayed disabled after the camera became active (the parent never re-rendered). `CameraCapture` now reports readiness through `onReadyChange` and `ChecklistStepView` keeps it in state
+- Camera permission error icon now comes from a static map (same icons), clearing the new `react-hooks/static-components` error
+
+---
+
 ## [0.5.2] - 2026-01-31 - Fix Jobs Page Schema Mismatch
 
 ### 🐛 Bug Fixes

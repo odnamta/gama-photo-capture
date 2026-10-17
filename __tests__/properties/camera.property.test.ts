@@ -2701,7 +2701,7 @@ const timestampArb: fc.Arbitrary<Date> = fc.integer({
 /**
  * Generator for timeout error specifically
  */
-const timeoutErrorArb: fc.Arbitrary<GpsAcquisitionResult> = fc.constant({
+const timeoutErrorArb: fc.Arbitrary<Extract<GpsAcquisitionResult, { success: false }>> = fc.constant({
   success: false as const,
   error: { type: 'TIMEOUT' as const, message: 'Location request timed out' },
 })
@@ -2709,7 +2709,7 @@ const timeoutErrorArb: fc.Arbitrary<GpsAcquisitionResult> = fc.constant({
 /**
  * Generator for permission denied error specifically
  */
-const permissionDeniedErrorArb: fc.Arbitrary<GpsAcquisitionResult> = fc.constant({
+const permissionDeniedErrorArb: fc.Arbitrary<Extract<GpsAcquisitionResult, { success: false }>> = fc.constant({
   success: false as const,
   error: { type: 'PERMISSION_DENIED' as const, message: 'Location permission was denied' },
 })

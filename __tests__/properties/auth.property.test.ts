@@ -221,7 +221,7 @@ describe('Property 3: Role Verification on Authentication', () => {
               }),
             }),
           }),
-        } as unknown as ReturnType<typeof createClient>)
+        } as unknown as Awaited<ReturnType<typeof createClient>>)
 
         const { checkUserRole } = await import('@/lib/auth/check-role')
         const result = await checkUserRole(userId)
@@ -273,7 +273,7 @@ describe('Property 3: Role Verification on Authentication', () => {
                 }),
               }),
             }),
-          } as unknown as ReturnType<typeof createClient>)
+          } as unknown as Awaited<ReturnType<typeof createClient>>)
 
           const { checkUserRole } = await import('@/lib/auth/check-role')
           const result = await checkUserRole(userId)
@@ -346,7 +346,7 @@ describe('Property 4: Access Denied for Invalid Roles', () => {
               }),
             }),
           }),
-        } as unknown as ReturnType<typeof createClient>)
+        } as unknown as Awaited<ReturnType<typeof createClient>>)
 
         const { checkUserRole } = await import('@/lib/auth/check-role')
         const result = await checkUserRole(userId)
@@ -394,7 +394,7 @@ describe('Property 4: Access Denied for Invalid Roles', () => {
               }),
             }),
           }),
-        } as unknown as ReturnType<typeof createClient>)
+        } as unknown as Awaited<ReturnType<typeof createClient>>)
 
         const { checkUserRole } = await import('@/lib/auth/check-role')
         const result = await checkUserRole(userId)
@@ -442,7 +442,7 @@ describe('Property 4: Access Denied for Invalid Roles', () => {
               }),
             }),
           }),
-        } as unknown as ReturnType<typeof createClient>)
+        } as unknown as Awaited<ReturnType<typeof createClient>>)
 
         const { checkUserRole } = await import('@/lib/auth/check-role')
         const result = await checkUserRole(userId)

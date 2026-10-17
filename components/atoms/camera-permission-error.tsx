@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, Camera, CameraOff, RefreshCw, Settings, XCircle } from 'lucide-react'
+import { AlertCircle, Camera, CameraOff, RefreshCw, Settings, XCircle, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import type { CameraError } from '@/hooks/use-camera'
@@ -15,25 +15,18 @@ interface CameraPermissionErrorProps {
 }
 
 /**
- * Get the appropriate icon for each error type
+ * The appropriate icon for each error type.
+ * A static module-level map (not a function called during render), so the
+ * React Compiler lint does not treat the icon as a component created in render.
  */
-function getErrorIcon(errorType: CameraError['type']) {
-  switch (errorType) {
-    case 'NOT_SUPPORTED':
-      return CameraOff
-    case 'PERMISSION_DENIED':
-    case 'PERMISSION_DISMISSED':
-      return XCircle
-    case 'NOT_FOUND':
-      return CameraOff
-    case 'NOT_READABLE':
-      return Camera
-    case 'OVERCONSTRAINED':
-      return AlertCircle
-    case 'UNKNOWN':
-    default:
-      return AlertCircle
-  }
+const ERROR_ICONS: Record<CameraError['type'], LucideIcon> = {
+  NOT_SUPPORTED: CameraOff,
+  PERMISSION_DENIED: XCircle,
+  PERMISSION_DISMISSED: XCircle,
+  NOT_FOUND: CameraOff,
+  NOT_READABLE: Camera,
+  OVERCONSTRAINED: AlertCircle,
+  UNKNOWN: AlertCircle,
 }
 
 /**
@@ -126,7 +119,7 @@ export function CameraPermissionError({
   onRetry,
   className
 }: CameraPermissionErrorProps) {
-  const Icon = getErrorIcon(error.type)
+  const Icon = ERROR_ICONS[error.type] ?? AlertCircle
   const title = getErrorTitle(error.type)
   const instructions = getInstructions(error.type, error.isPermanent)
 

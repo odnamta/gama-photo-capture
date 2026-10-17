@@ -112,6 +112,7 @@ export function QueueItem({
   useEffect(() => {
     if (photo.blob) {
       const url = URL.createObjectURL(photo.blob)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- object URL is an external resource that must be created and revoked in the effect
       setThumbnailUrl(url)
       return () => URL.revokeObjectURL(url)
     }

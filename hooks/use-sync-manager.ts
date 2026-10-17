@@ -295,6 +295,7 @@ export function useSyncManager(options: UseSyncManagerOptions = {}): UseSyncMana
   // Auto-sync when coming online
   useEffect(() => {
     if (autoSync && isOnline && state === 'paused') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- starts the async upload loop when connectivity returns
       startSync()
     }
   }, [autoSync, isOnline, state, startSync])
@@ -302,6 +303,7 @@ export function useSyncManager(options: UseSyncManagerOptions = {}): UseSyncMana
   // Pause when going offline
   useEffect(() => {
     if (!isOnline && state === 'processing') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- stops the upload loop when connectivity drops
       pauseSync()
     }
   }, [isOnline, state, pauseSync])

@@ -144,7 +144,8 @@ describe('Project Configuration', () => {
       const packageContent = fs.readFileSync(packagePath, 'utf-8')
       const packageJson = JSON.parse(packageContent)
 
-      expect(packageJson.scripts.lint).toBe('next lint')
+      // `next lint` was removed in Next.js 16; the app lints with the ESLint CLI
+      expect(packageJson.scripts.lint).toBe('eslint')
     })
   })
 })

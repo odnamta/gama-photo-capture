@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { SkipForward } from 'lucide-react'
 import { StepProgressBar } from '@/components/atoms/step-progress-bar'
 import { StepInstructions } from '@/components/atoms/step-instructions'
@@ -70,6 +70,10 @@ export function ChecklistStepView({
 }: ChecklistStepViewProps) {
   // Ref to access CameraCapture's capturePhoto method
   const cameraRef = useRef<CameraCaptureHandle>(null)
+
+  // Camera readiness as state (reported by CameraCapture) so the capture
+  // button re-renders when the camera becomes active
+  const [cameraReady, setCameraReady] = useState(false)
   
   // Check if camera is supported
   const cameraSupported = isCameraSupported()
@@ -146,6 +150,7 @@ export function ChecklistStepView({
           <CameraCapture
             ref={cameraRef}
             onCapture={handleCameraCapture}
+            onReadyChange={setCameraReady}
             className="h-full"
           />
         ) : (
@@ -164,7 +169,7 @@ export function ChecklistStepView({
           <div className="flex justify-center">
             <CaptureButton 
               onCapture={handleCaptureClick}
-              disabled={!cameraRef.current?.isReady()}
+              disabled={!cameraReady}
               aria-label={`Capture ${title}`}
             />
           </div>
